@@ -70,6 +70,11 @@ pub fn pure(x: a) -> Parser(a, t, s, c, e) {
   Parser(fn(in, pos, ctx) { Ok(#(x, in, pos, ctx)) })
 }
 
+/// Map over a parser
+pub fn map(p: Parser(a, t, s, c, e), f: fn(a) -> b) -> Parser(b, t, s, c, e) {
+  do(p, fn(x) { pure(f(x)) })
+}
+
 /// Compose two parsers
 pub fn do(
   p: Parser(a, t, s, c, e),
@@ -110,6 +115,62 @@ pub fn label(
       Error(ParseError(pos2, got, _)) if pos == pos2 ->
         Error(ParseError(pos2, got, set.insert(set.new(), Msg(name))))
       x -> x
+    }
+  }
+  |> Parser
+}
+
+/// Try to apply a parser, returning `Nil` if it fails without consuming input.
+pub fn optional(p: Parser(a, t, s, c, e)) -> Parser(Result(a, Nil), t, s, c, e) {
+  fn(in, pos, ctx) {
+    case p.run(in, pos, ctx) {
+      Ok(#(x, in2, pos2, ctx2)) -> Ok(#(Ok(x), in2, pos2, ctx2))
+      Error(ParseError(pos2, _, _)) if pos == pos2 ->
+        Ok(#(Error(Nil), in, pos, ctx))
+      Error(e) -> Error(e)
+    }
+  }
+  |> Parser
+}
+
+/// Zero or more parsers.
+pub fn many(p: Parser(a, t, s, c, e)) -> Parser(List(a), t, s, c, e) {
+  use x <- do(optional(p))
+  case x {
+    Ok(x) -> many(p) |> map(fn(xs) { [x, ..xs] })
+    Error(_) -> pure([])
+  }
+}
+
+/// One or more parsers.
+pub fn some(p: Parser(a, t, s, c, e)) -> Parser(List(a), t, s, c, e) {
+  use x <- do(p)
+  many(p) |> map(fn(xs) { [x, ..xs] })
+}
+
+/// Try each parser in order, returning the first successful result.
+/// If a parser fails but consumes input, that error is returned.
+pub fn choice(ps: List(Parser(a, t, s, c, e))) -> Parser(a, t, s, c, e) {
+  do_choice(ps, set.new())
+}
+
+fn do_choice(
+  ps: List(Parser(a, t, s, c, e)),
+  err: Set(ErrorPart(t)),
+) -> Parser(a, t, s, c, e) {
+  // TODO: whats the performance of wrapping in a parser? does it need to be?
+  fn(in, pos, ctx) {
+    case ps {
+      [p, ..ps] ->
+        case p.run(in, pos, ctx) {
+          Error(ParseError(pos2, _, exp)) if pos == pos2 ->
+            do_choice(ps, set.union(err, exp)).run(in, pos, ctx)
+          x -> x
+        }
+      [] -> {
+        use #(t, _, _) <- result.try(get(in, pos))
+        Error(ParseError(pos, Token(t), err))
+      }
     }
   }
   |> Parser
