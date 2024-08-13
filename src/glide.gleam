@@ -86,40 +86,6 @@ pub fn do(
   |> Parser
 }
 
-/// Parse a token if it matches a predicate.
-/// This should be labelled!
-pub fn satisfy(f: fn(t) -> Bool) -> Parser(t, t, s, c, e) {
-  fn(in: ParserInput(t, s), pos, ctx) {
-    case get(in, pos) {
-      Ok(#(t, in2, pos2)) ->
-        case f(t) {
-          True -> Ok(#(t, in2, pos2, ctx))
-          False -> Error(ParseError(pos, Token(t), set.new()))
-        }
-      Error(e) -> Error(e)
-    }
-  }
-  |> Parser
-}
-
-/// Label a parser.
-/// When this parser fails without consuming input, the 'expected' message
-/// is set to this message.
-pub fn label(
-  name: String,
-  f: fn() -> Parser(a, t, s, c, e),
-) -> Parser(a, t, s, c, e) {
-  fn(in, pos, ctx) {
-    let p = f()
-    case p.run(in, pos, ctx) {
-      Error(ParseError(pos2, got, _)) if pos == pos2 ->
-        Error(ParseError(pos2, got, set.insert(set.new(), Msg(name))))
-      x -> x
-    }
-  }
-  |> Parser
-}
-
 /// Try to apply a parser, returning `Nil` if it fails without consuming input.
 pub fn optional(p: Parser(a, t, s, c, e)) -> Parser(Result(a, Nil), t, s, c, e) {
   fn(in, pos, ctx) {
@@ -171,6 +137,52 @@ fn do_choice(
         use #(t, _, _) <- result.try(get(in, pos))
         Error(ParseError(pos, Token(t), err))
       }
+    }
+  }
+  |> Parser
+}
+
+/// Parse a token if it matches a predicate.
+/// This should be labelled!
+pub fn satisfy(f: fn(t) -> Bool) -> Parser(t, t, s, c, e) {
+  fn(in: ParserInput(t, s), pos, ctx) {
+    case get(in, pos) {
+      Ok(#(t, in2, pos2)) ->
+        case f(t) {
+          True -> Ok(#(t, in2, pos2, ctx))
+          False -> Error(ParseError(pos, Token(t), set.new()))
+        }
+      Error(e) -> Error(e)
+    }
+  }
+  |> Parser
+}
+
+/// Label a parser.
+/// When this parser fails without consuming input, the 'expected' message
+/// is set to this message.
+pub fn label(
+  name: String,
+  f: fn() -> Parser(a, t, s, c, e),
+) -> Parser(a, t, s, c, e) {
+  fn(in, pos, ctx) {
+    let p = f()
+    case p.run(in, pos, ctx) {
+      Error(ParseError(pos2, got, _)) if pos == pos2 ->
+        Error(ParseError(pos2, got, set.insert(set.new(), Msg(name))))
+      x -> x
+    }
+  }
+  |> Parser
+}
+
+/// Matches the end of input.
+pub fn eof() -> Parser(Nil, t, s, c, e) {
+  fn(in, pos, ctx) {
+    case get(in, pos) {
+      Ok(#(t, _, _)) ->
+        Error(ParseError(pos, Token(t), set.insert(set.new(), Msg("EOF"))))
+      Error(_) -> Ok(#(Nil, in, pos, ctx))
     }
   }
   |> Parser
