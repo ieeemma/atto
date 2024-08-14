@@ -1,4 +1,3 @@
-import gleam/list
 import gleam/result
 import gleam/set.{type Set}
 import gleam/string
@@ -19,13 +18,9 @@ pub type ErrorPart(t) {
 
 /// An input to the parser.
 /// This type is parameterised by the token type `t` and the token stream `s`.
-/// It provides functions to get and peek the stream.
+/// It provides a functions to get a token from the stream.
 pub type ParserInput(t, s) {
-  ParserInput(
-    src: s,
-    get: fn(s, Pos) -> Result(#(t, s, Pos), Nil),
-    peek: fn(s) -> Result(t, Nil),
-  )
+  ParserInput(src: s, get: fn(s, Pos) -> Result(#(t, s, Pos), Nil))
 }
 
 /// Create a parser input from a string.
@@ -38,7 +33,7 @@ pub fn string_input(src: String) -> ParserInput(String, List(String)) {
       [] -> Error(Nil)
     }
   }
-  ParserInput(string.to_graphemes(src), get, list.first)
+  ParserInput(string.to_graphemes(src), get)
 }
 
 fn get(
@@ -65,6 +60,15 @@ pub opaque type Parser(a, t, s, c, e) {
 pub type StringParser(a) =
   Parser(a, String, List(String), Nil, Nil)
 
+pub fn run(
+  p: Parser(a, t, s, c, e),
+  in: ParserInput(t, s),
+  ctx: c,
+) -> Result(a, ParseError(e, t)) {
+  p.run(in, Pos(1, 1), ctx)
+  |> result.map(fn(x) { x.0 })
+}
+
 /// Lift a value into the parser context
 pub fn pure(x: a) -> Parser(a, t, s, c, e) {
   Parser(fn(in, pos, ctx) { Ok(#(x, in, pos, ctx)) })
@@ -82,6 +86,52 @@ pub fn do(
 ) -> Parser(b, t, s, c, e) {
   fn(in, pos, ctx) {
     result.try(p.run(in, pos, ctx), fn(x) { f(x.0).run(x.1, x.2, x.3) })
+  }
+  |> Parser
+}
+
+/// Parse a token if it matches a predicate.
+/// This should be labelled!
+pub fn satisfy(f: fn(t) -> Bool) -> Parser(t, t, s, c, e) {
+  fn(in: ParserInput(t, s), pos, ctx) {
+    case get(in, pos) {
+      Ok(#(t, in2, pos2)) ->
+        case f(t) {
+          True -> Ok(#(t, in2, pos2, ctx))
+          False -> Error(ParseError(pos, Token(t), set.new()))
+        }
+      Error(e) -> Error(e)
+    }
+  }
+  |> Parser
+}
+
+/// Label a parser.
+/// When this parser fails without consuming input, the 'expected' message
+/// is set to this message.
+pub fn label(
+  name: String,
+  f: fn() -> Parser(a, t, s, c, e),
+) -> Parser(a, t, s, c, e) {
+  fn(in, pos, ctx) {
+    let p = f()
+    case p.run(in, pos, ctx) {
+      Error(ParseError(pos2, got, _)) if pos == pos2 ->
+        Error(ParseError(pos2, got, set.insert(set.new(), Msg(name))))
+      x -> x
+    }
+  }
+  |> Parser
+}
+
+/// Matches the end of input.
+pub fn eof() -> Parser(Nil, t, s, c, e) {
+  fn(in, pos, ctx) {
+    case get(in, pos) {
+      Ok(#(t, _, _)) ->
+        Error(ParseError(pos, Token(t), set.insert(set.new(), Msg("EOF"))))
+      Error(_) -> Ok(#(Nil, in, pos, ctx))
+    }
   }
   |> Parser
 }
@@ -137,52 +187,6 @@ fn do_choice(
         use #(t, _, _) <- result.try(get(in, pos))
         Error(ParseError(pos, Token(t), err))
       }
-    }
-  }
-  |> Parser
-}
-
-/// Parse a token if it matches a predicate.
-/// This should be labelled!
-pub fn satisfy(f: fn(t) -> Bool) -> Parser(t, t, s, c, e) {
-  fn(in: ParserInput(t, s), pos, ctx) {
-    case get(in, pos) {
-      Ok(#(t, in2, pos2)) ->
-        case f(t) {
-          True -> Ok(#(t, in2, pos2, ctx))
-          False -> Error(ParseError(pos, Token(t), set.new()))
-        }
-      Error(e) -> Error(e)
-    }
-  }
-  |> Parser
-}
-
-/// Label a parser.
-/// When this parser fails without consuming input, the 'expected' message
-/// is set to this message.
-pub fn label(
-  name: String,
-  f: fn() -> Parser(a, t, s, c, e),
-) -> Parser(a, t, s, c, e) {
-  fn(in, pos, ctx) {
-    let p = f()
-    case p.run(in, pos, ctx) {
-      Error(ParseError(pos2, got, _)) if pos == pos2 ->
-        Error(ParseError(pos2, got, set.insert(set.new(), Msg(name))))
-      x -> x
-    }
-  }
-  |> Parser
-}
-
-/// Matches the end of input.
-pub fn eof() -> Parser(Nil, t, s, c, e) {
-  fn(in, pos, ctx) {
-    case get(in, pos) {
-      Ok(#(t, _, _)) ->
-        Error(ParseError(pos, Token(t), set.insert(set.new(), Msg("EOF"))))
-      Error(_) -> Ok(#(Nil, in, pos, ctx))
     }
   }
   |> Parser
