@@ -1,3 +1,4 @@
+import gleam/regex
 import gleam/result
 import gleam/set.{type Set}
 import gleam/string
@@ -21,19 +22,6 @@ pub type ErrorPart(t) {
 /// It provides a functions to get a token from the stream.
 pub type ParserInput(t, s) {
   ParserInput(src: s, get: fn(s, Pos) -> Result(#(t, s, Pos), Nil))
-}
-
-/// Create a parser input from a string.
-/// The token type is a character, and the stream type is a list of graphemes.
-pub fn string_input(src: String) -> ParserInput(String, List(String)) {
-  let get = fn(x: List(String), p: Pos) {
-    case x {
-      ["\n", ..ts] -> Ok(#("\n", ts, Pos(p.line + 1, p.col)))
-      [t, ..ts] -> Ok(#(t, ts, Pos(p.line, p.col + 1)))
-      [] -> Error(Nil)
-    }
-  }
-  ParserInput(string.to_graphemes(src), get)
 }
 
 fn get(
@@ -187,6 +175,40 @@ fn do_choice(
         use #(t, _, _) <- result.try(get(in, pos))
         Error(ParseError(pos, Token(t), err))
       }
+    }
+  }
+  |> Parser
+}
+
+// TODO: This needs a javascript-specific implementation, as
+// the string slicing will likely be really inefficient.
+pub fn string_input(src: String) -> ParserInput(String, String) {
+  ParserInput(src, string_input_get)
+}
+
+fn string_input_get(s: String, p: Pos) -> Result(#(String, String, Pos), Nil) {
+  case string.pop_grapheme(s) {
+    Ok(#("\n", ts)) -> Ok(#("\n", ts, Pos(p.line + 1, p.col)))
+    Ok(#(t, ts)) -> Ok(#(t, ts, Pos(p.line, p.col + 1)))
+    Error(_) -> Error(Nil)
+  }
+}
+
+pub fn match(r: String) -> Parser(String, String, String, Nil, Nil) {
+  fn(in, pos, ctx) {
+    case regex.compile(r, regex.Options(False, True)) {
+      Ok(r) -> regex(r).run(in, pos, ctx)
+      Error(e) -> Error(ParseError(pos, Msg(e.error), set.new()))
+    }
+  }
+  |> Parser
+}
+
+pub fn regex(r: regex.Regex) -> Parser(String, String, String, Nil, Nil) {
+  fn(in: ParserInput(String, String), pos, ctx) {
+    case regex.check(r, in.src) {
+      True -> Ok(#(in.src, in, pos, ctx))
+      False -> Error(ParseError(pos, Msg("Regex failed"), set.new()))
     }
   }
   |> Parser

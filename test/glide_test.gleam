@@ -1,5 +1,4 @@
 import gleam/set
-import gleam/string
 import gleeunit
 import gleeunit/should
 import glide
@@ -13,7 +12,7 @@ pub fn string_input_test() {
   let pos = glide.Pos(1, 1)
   let assert Ok(#(t, s, pos)) = in.get(in.src, pos)
   t |> should.equal("H")
-  s |> should.equal(string.to_graphemes("ello, world!"))
+  s |> should.equal("ello, world!")
   pos |> should.equal(glide.Pos(1, 2))
 
   let in = glide.string_input("")
@@ -145,5 +144,31 @@ pub fn choice_test() {
   |> glide.run(glide.string_input("7"), Nil)
   |> should.equal(
     Error(glide.ParseError(glide.Pos(1, 1), glide.Token("7"), set.new())),
+  )
+}
+
+pub fn regex_test() {
+  glide.match("[0-9]+")
+  |> glide.run(glide.string_input("452"), Nil)
+  |> should.equal(Ok("452"))
+
+  glide.match("[0-9]+")
+  |> glide.run(glide.string_input("foo"), Nil)
+  |> should.equal(
+    Error(glide.ParseError(
+      glide.Pos(1, 1),
+      glide.Msg("Regex failed"),
+      set.new(),
+    )),
+  )
+
+  glide.match("[")
+  |> glide.run(glide.string_input("foo"), Nil)
+  |> should.equal(
+    Error(glide.ParseError(
+      glide.Pos(1, 1),
+      glide.Msg("Invalid regular expression: /[/: Unterminated character class"),
+      set.new(),
+    )),
   )
 }
