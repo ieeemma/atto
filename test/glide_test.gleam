@@ -167,7 +167,9 @@ pub fn regex_test() {
   |> should.equal(
     Error(glide.ParseError(
       glide.Pos(1, 1),
-      glide.Msg("Invalid regular expression: /[/: Unterminated character class"),
+      glide.Msg(
+        "Invalid regular expression: /^[/: Unterminated character class",
+      ),
       set.new(),
     )),
   )

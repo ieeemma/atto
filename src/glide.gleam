@@ -195,21 +195,32 @@ fn string_input_get(s: String, p: Pos) -> Result(#(String, String, Pos), Nil) {
 }
 
 pub fn match(r: String) -> Parser(String, String, String, Nil, Nil) {
-  fn(in, pos, ctx) {
-    case regex.compile(r, regex.Options(False, True)) {
-      Ok(r) -> regex(r).run(in, pos, ctx)
-      Error(e) -> Error(ParseError(pos, Msg(e.error), set.new()))
+  case regex.from_string("^" <> r) {
+    Ok(r) -> fn(in: ParserInput(String, String), pos, ctx) {
+      case regex.scan(r, in.src) {
+        [] -> Error(ParseError(pos, Msg("Regex failed"), set.new()))
+        [m] -> {
+          let x = m.content
+          let xs = string.drop_left(in.src, string.length(m.content))
+          let p = advance_pos_string(pos, x)
+          Ok(#(x, ParserInput(..in, src: xs), p, ctx))
+        }
+        [_, ..] -> panic as "Multiple scan matches"
+      }
+    }
+    Error(e) -> fn(_, pos, _) {
+      Error(ParseError(pos, Msg(e.error), set.new()))
     }
   }
   |> Parser
 }
 
-pub fn regex(r: regex.Regex) -> Parser(String, String, String, Nil, Nil) {
-  fn(in: ParserInput(String, String), pos, ctx) {
-    case regex.check(r, in.src) {
-      True -> Ok(#(in.src, in, pos, ctx))
-      False -> Error(ParseError(pos, Msg("Regex failed"), set.new()))
-    }
+fn advance_pos_string(p: Pos, x: String) -> Pos {
+  case string.pop_grapheme(x) {
+    Ok(#("\n", x)) -> advance_pos_string(Pos(p.line + 1, 1), x)
+    Ok(#(_, x)) -> advance_pos_string(Pos(p.line, p.col + 1), x)
+    Error(_) -> p
+  }
   }
   |> Parser
 }
