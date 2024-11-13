@@ -139,10 +139,15 @@ pub fn optional(p: Parser(a, t, s, c, e)) -> Parser(Result(a, Nil), t, s, c, e) 
 
 /// Zero or more parsers.
 pub fn many(p: Parser(a, t, s, c, e)) -> Parser(List(a), t, s, c, e) {
+  do_many(p, [])
+}
+
+// TODO: make this better using cps
+fn do_many(p, acc) {
   use x <- do(optional(p))
   case x {
-    Ok(x) -> many(p) |> map(fn(xs) { [x, ..xs] })
-    Error(_) -> pure([])
+    Ok(x) -> do_many(p, [x, ..acc])
+    Error(_) -> pure(list.reverse(acc))
   }
 }
 
@@ -155,29 +160,24 @@ pub fn some(p: Parser(a, t, s, c, e)) -> Parser(List(a), t, s, c, e) {
 /// Try each parser in order, returning the first successful result.
 /// If a parser fails but consumes input, that error is returned.
 pub fn choice(ps: List(Parser(a, t, s, c, e))) -> Parser(a, t, s, c, e) {
-  do_choice(ps, set.new())
+  fn(in, pos, ctx) { do_choice(ps, set.new(), in, pos, ctx) }
+  |> Parser
 }
 
-fn do_choice(
-  ps: List(Parser(a, t, s, c, e)),
-  err: Set(ErrorPart(t)),
-) -> Parser(a, t, s, c, e) {
-  // TODO: whats the performance of wrapping in a parser? does it need to be?
-  fn(in, pos, ctx) {
-    case ps {
-      [p, ..ps] ->
-        case p.run(in, pos, ctx) {
-          Error(ParseError(pos2, _, exp)) if pos == pos2 ->
-            do_choice(ps, set.union(err, exp)).run(in, pos, ctx)
-          x -> x
-        }
-      [] -> {
-        use #(t, _, _) <- result.try(get(in, pos))
-        Error(ParseError(pos, Token(t), err))
+fn do_choice(ps: List(Parser(a, t, s, c, e)), err, in, pos, ctx) {
+  case ps {
+    [p, ..ps] -> {
+      case p.run(in, pos, ctx) {
+        Error(ParseError(pos2, _, exp)) if pos == pos2 ->
+          do_choice(ps, set.union(err, exp), in, pos, ctx)
+        x -> x
       }
     }
+    [] -> {
+      use #(t, _, _) <- result.try(get(in, pos))
+      Error(ParseError(pos, Token(t), err))
+    }
   }
-  |> Parser
 }
 
 // TODO: This needs a javascript-specific implementation, as
