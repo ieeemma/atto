@@ -24,7 +24,7 @@ fn object() {
   use <- glide.label("object")
   ops.between(
     glide.token("{") |> ws,
-    ops.sep_by(key_value(), glide.token(",") |> ws()),
+    ops.sep(key_value(), glide.token(",") |> ws()),
     glide.token("}") |> ws,
   )
   |> glide.map(dict.from_list)
@@ -44,7 +44,7 @@ fn array() {
   use <- glide.label("array")
   ops.between(
     glide.token("[") |> ws,
-    ops.sep_by(json(), glide.token(",") |> ws()),
+    ops.sep(json(), glide.token(",") |> ws()),
     glide.token("]") |> ws,
   )
   |> glide.map(Array)
