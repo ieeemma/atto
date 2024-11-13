@@ -23,13 +23,20 @@ pub fn match(r: String) -> Parser(String, String, String, Nil, Nil) {
   case regex.from_string("^" <> r) {
     Ok(r) -> fn(in: ParserInput(String, String), pos, ctx) {
       case regex.scan(r, in.src) {
-        // TODO: error on zero-length matches
         [] -> Error(glide.ParseError(pos, glide.Msg("Regex failed"), set.new()))
         [m] -> {
           let x = m.content
           let xs = string.drop_left(in.src, string.length(m.content))
           let p = advance_pos_string(pos, x)
-          Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
+          case string.length(x) {
+            0 ->
+              Error(glide.ParseError(
+                pos,
+                glide.Msg("Zero-length match"),
+                set.new(),
+              ))
+            _ -> Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
+          }
         }
         [_, ..] -> panic as "Multiple scan matches"
       }
