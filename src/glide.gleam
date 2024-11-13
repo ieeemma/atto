@@ -1,4 +1,5 @@
-/// Parser combinators for parsing arbitrary stream types.
+//// Parser combinators for parsing arbitrary stream types.
+
 import gleam/result
 import gleam/set.{type Set}
 

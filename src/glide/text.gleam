@@ -1,4 +1,5 @@
-/// Functions for parsing over strings.
+//// Functions for parsing over strings.
+
 import gleam/regex
 import gleam/set
 import gleam/string

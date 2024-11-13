@@ -1,4 +1,5 @@
-/// Parser combinators for constructing layout, such as `many` and `choice`.
+//// Parser combinators for constructing layout, such as `many` and `choice`.
+
 import gleam/list
 import gleam/result
 import gleam/set
