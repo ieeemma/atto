@@ -117,6 +117,6 @@ fn null() {
 
 fn ws(x) {
   use x <- do(x)
-  use <- drop(text.match("\\s*"))
+  use <- drop(ops.maybe(text.match("\\s+")))
   pure(x)
 }
