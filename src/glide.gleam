@@ -68,6 +68,24 @@ pub fn fail(msg: String) -> Parser(a, t, s, c, e) {
   Parser(fn(_, pos, _) { Error(ParseError(pos, Msg(msg), set.new())) })
 }
 
+/// Get the current position in the input stream
+pub fn pos() -> Parser(Pos, t, s, c, e) {
+  Parser(fn(in, pos, ctx) { Ok(#(pos, in, pos, ctx)) })
+}
+
+/// Get the current context
+pub fn ctx() -> Parser(c, t, s, c, e) {
+  Parser(fn(in, pos, ctx) { Ok(#(ctx, in, pos, ctx)) })
+}
+
+/// Modify the current context within a parser
+pub fn with_ctx(
+  f: fn(c) -> c,
+  p: Parser(a, t, s, c, e),
+) -> Parser(a, t, s, c, e) {
+  Parser(fn(in, pos, ctx) { p.run(in, pos, f(ctx)) })
+}
+
 /// Map over a parser
 pub fn map(p: Parser(a, t, s, c, e), f: fn(a) -> b) -> Parser(b, t, s, c, e) {
   do(p, fn(x) { pure(f(x)) })
