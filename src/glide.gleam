@@ -84,6 +84,26 @@ pub fn do(
   |> Parser
 }
 
+/// Compose two parsers, discarding the result of the first
+pub fn drop(
+  p: Parser(a, t, s, c, e),
+  q: fn() -> Parser(b, t, s, c, e),
+) -> Parser(b, t, s, c, e) {
+  do(p, fn(_) { q() })
+}
+
+/// Run a parser between two other parsers, returning the result of the middle
+pub fn between(
+  open: Parser(_, t, s, c, e),
+  p: Parser(a, t, s, c, e),
+  close: Parser(_, t, s, c, e),
+) -> Parser(a, t, s, c, e) {
+  use <- drop(open)
+  use x <- do(p)
+  use <- drop(close)
+  pure(x)
+}
+
 /// Parse a token if it matches a predicate.
 /// This should be labelled!
 pub fn satisfy(f: fn(t) -> Bool) -> Parser(t, t, s, c, e) {

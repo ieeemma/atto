@@ -3,7 +3,7 @@ import gleam/float
 import gleam/int
 import gleam/result
 import gleam/string
-import glide.{do, pure}
+import glide.{do, drop, pure}
 
 pub type Json {
   Object(dict.Dict(String, Json))
@@ -20,43 +20,47 @@ pub fn json() -> glide.Parser(Json, String, String, Nil, Nil) {
 
 fn object() {
   use <- glide.label("object")
-  use _ <- do(glide.token("{") |> ws())
-  use xs <- do(glide.sep_by(key_value(), glide.token(",") |> ws()))
-  use _ <- do(glide.token("}") |> ws())
-  pure(Object(dict.from_list(xs)))
+  glide.between(
+    glide.token("{") |> ws,
+    glide.sep_by(key_value(), glide.token(",") |> ws()),
+    glide.token("}") |> ws,
+  )
+  |> glide.map(dict.from_list)
+  |> glide.map(Object)
 }
 
 fn key_value() {
   use <- glide.label("key-value pair")
   use k <- do(string())
   let assert String(k) = k
-  use _ <- do(glide.token(":") |> ws())
+  use <- drop(glide.token(":") |> ws())
   use v <- do(json())
   pure(#(k, v))
 }
 
 fn array() {
   use <- glide.label("array")
-  use _ <- do(glide.token("[") |> ws())
-  use xs <- do(glide.sep_by(json(), glide.token(",") |> ws()))
-  use _ <- do(glide.token("]") |> ws())
-  pure(Array(xs))
+  glide.between(
+    glide.token("[") |> ws,
+    glide.sep_by(json(), glide.token(",") |> ws()),
+    glide.token("]") |> ws,
+  )
+  |> glide.map(Array)
 }
 
 fn string() {
   use <- glide.label("string")
-  use _ <- do(glide.token("\""))
-  use s <- do(
-    glide.many(
-      glide.choice([
-        unicode_escape(),
-        escape(),
-        glide.satisfy(fn(c) { c != "\"" }),
-      ]),
-    ),
+  glide.between(
+    glide.token("\"") |> ws,
+    glide.many(string_inner()),
+    glide.token("\"") |> ws,
   )
-  use _ <- do(glide.token("\""))
-  pure(String(string.concat(s)))
+  |> glide.map(string.concat)
+  |> glide.map(String)
+}
+
+fn string_inner() {
+  glide.choice([unicode_escape(), escape(), glide.satisfy(fn(c) { c != "\"" })])
 }
 
 fn escape() {
@@ -75,7 +79,7 @@ fn escape() {
 
 fn unicode_escape() {
   use <- glide.label("unicode escape")
-  use _ <- do(glide.match("\\\\u") |> ws())
+  use <- drop(glide.match("\\\\u") |> ws())
   use a <- do(glide.match("[0-9a-fA-F]") |> ws())
   use b <- do(glide.match("[0-9a-fA-F]") |> ws())
   use c <- do(glide.match("[0-9a-fA-F]") |> ws())
@@ -111,6 +115,6 @@ fn null() {
 
 fn ws(x) {
   use x <- do(x)
-  use _ <- do(glide.match("\\s*"))
+  use <- drop(glide.match("\\s*"))
   pure(x)
 }
