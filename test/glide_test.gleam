@@ -1,7 +1,10 @@
+import gleam/dict
+import gleam/list
 import gleam/set
 import gleeunit
 import gleeunit/should
 import glide
+import json.{json}
 
 pub fn main() {
   gleeunit.main()
@@ -172,5 +175,47 @@ pub fn regex_test() {
       ),
       set.new(),
     )),
+  )
+}
+
+pub fn json_test() {
+  json()
+  |> glide.run(glide.string_input("{\"foo\": 5}"), Nil)
+  |> should.equal(Ok(json.Object(dict.from_list([#("foo", json.Number(5.0))]))))
+
+  json()
+  |> glide.run(glide.string_input("[1, 2, 3]"), Nil)
+  |> should.equal(
+    Ok(json.Array([json.Number(1.0), json.Number(2.0), json.Number(3.0)])),
+  )
+
+  json()
+  |> glide.run(glide.string_input("\"foo\""), Nil)
+  |> should.equal(Ok(json.String("foo")))
+
+  json()
+  |> glide.run(glide.string_input("5"), Nil)
+  |> should.equal(Ok(json.Number(5.0)))
+
+  json()
+  |> glide.run(glide.string_input("true"), Nil)
+  |> should.equal(Ok(json.Bool(True)))
+
+  json()
+  |> glide.run(glide.string_input("false"), Nil)
+  |> should.equal(Ok(json.Bool(False)))
+
+  json()
+  |> glide.run(glide.string_input("null"), Nil)
+  |> should.equal(Ok(json.Null))
+
+  let all =
+    ["object", "array", "string", "number", "bool", "null"]
+    |> list.map(glide.Msg)
+    |> set.from_list
+  json()
+  |> glide.run(glide.string_input("foo"), Nil)
+  |> should.equal(
+    Error(glide.ParseError(glide.Pos(1, 1), glide.Token("f"), all)),
   )
 }

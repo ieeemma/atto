@@ -1,3 +1,4 @@
+import gleam/list
 import gleam/regex
 import gleam/result
 import gleam/set.{type Set}
@@ -62,6 +63,11 @@ pub fn pure(x: a) -> Parser(a, t, s, c, e) {
   Parser(fn(in, pos, ctx) { Ok(#(x, in, pos, ctx)) })
 }
 
+/// Fail with a given message
+pub fn fail(msg: String) -> Parser(a, t, s, c, e) {
+  Parser(fn(_, pos, _) { Error(ParseError(pos, Msg(msg), set.new())) })
+}
+
 /// Map over a parser
 pub fn map(p: Parser(a, t, s, c, e), f: fn(a) -> b) -> Parser(b, t, s, c, e) {
   do(p, fn(x) { pure(f(x)) })
@@ -92,6 +98,17 @@ pub fn satisfy(f: fn(t) -> Bool) -> Parser(t, t, s, c, e) {
     }
   }
   |> Parser
+}
+
+/// Parse a single token.
+pub fn any() -> Parser(t, t, s, c, e) {
+  use <- label("any token")
+  satisfy(fn(_) { True })
+}
+
+/// Parse a specific token.
+pub fn token(t: t) -> Parser(t, t, s, c, e) {
+  satisfy(fn(t2) { t == t2 })
 }
 
 /// Label a parser.
@@ -157,6 +174,24 @@ pub fn some(p: Parser(a, t, s, c, e)) -> Parser(List(a), t, s, c, e) {
   many(p) |> map(fn(xs) { [x, ..xs] })
 }
 
+/// One or more parsers separated by a delimiter.
+pub fn sep_by_1(
+  p: Parser(a, t, s, c, e),
+  sep: Parser(b, t, s, c, e),
+) -> Parser(List(a), t, s, c, e) {
+  use x <- do(p)
+  use xs <- do(many(do(sep, fn(_) { p })))
+  pure([x, ..xs])
+}
+
+/// Zero or more parsers separated by a delimiter.
+pub fn sep_by(
+  p: Parser(a, t, s, c, e),
+  sep: Parser(b, t, s, c, e),
+) -> Parser(List(a), t, s, c, e) {
+  choice([sep_by_1(p, sep), pure([])])
+}
+
 /// Try each parser in order, returning the first successful result.
 /// If a parser fails but consumes input, that error is returned.
 pub fn choice(ps: List(Parser(a, t, s, c, e))) -> Parser(a, t, s, c, e) {
@@ -186,7 +221,7 @@ pub fn string_input(src: String) -> ParserInput(String, String) {
   ParserInput(src, string_input_get)
 }
 
-fn string_input_get(s: String, p: Pos) -> Result(#(String, String, Pos), Nil) {
+fn string_input_get(s, p: Pos) {
   case string.pop_grapheme(s) {
     Ok(#("\n", ts)) -> Ok(#("\n", ts, Pos(p.line + 1, p.col)))
     Ok(#(t, ts)) -> Ok(#(t, ts, Pos(p.line, p.col + 1)))
@@ -215,12 +250,10 @@ pub fn match(r: String) -> Parser(String, String, String, Nil, Nil) {
   |> Parser
 }
 
-fn advance_pos_string(p: Pos, x: String) -> Pos {
+fn advance_pos_string(p: Pos, x) {
   case string.pop_grapheme(x) {
     Ok(#("\n", x)) -> advance_pos_string(Pos(p.line + 1, 1), x)
     Ok(#(_, x)) -> advance_pos_string(Pos(p.line, p.col + 1), x)
     Error(_) -> p
   }
-  }
-  |> Parser
 }
