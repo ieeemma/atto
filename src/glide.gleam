@@ -63,8 +63,13 @@ pub fn pure(x: a) -> Parser(a, t, s, c, e) {
   Parser(fn(in, pos, ctx) { Ok(#(x, in, pos, ctx)) })
 }
 
+/// Fail with a custom error value
+pub fn fail(err: e) -> Parser(a, t, s, c, e) {
+  Parser(fn(_, pos, _) { Error(Custom(pos, err)) })
+}
+
 /// Fail with a given message
-pub fn fail(msg: String) -> Parser(a, t, s, c, e) {
+pub fn fail_msg(msg: String) -> Parser(a, t, s, c, e) {
   Parser(fn(_, pos, _) { Error(ParseError(pos, Msg(msg), set.new())) })
 }
 

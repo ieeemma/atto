@@ -87,7 +87,7 @@ fn unicode_escape() {
   let assert Ok(n) = int.parse(string.concat(["0x", a, b, c, d]))
   case string.utf_codepoint(n) {
     Ok(s) -> pure(string.from_utf_codepoints([s]))
-    Error(_) -> glide.fail("Invalid unicode escape sequence")
+    Error(_) -> glide.fail_msg("Invalid unicode escape sequence")
   }
 }
 
