@@ -1,8 +1,11 @@
 import gleam/dict
 import gleam/float
 import gleam/int
+import gleam/list
 import gleam/result
+import gleam/set
 import gleam/string
+import gleeunit/should
 import glide.{type Parser, do, drop, pure}
 import glide/ops
 import glide/text
@@ -119,4 +122,44 @@ fn ws(x) {
   use x <- do(x)
   use <- drop(ops.maybe(text.match("\\s+")))
   pure(x)
+}
+
+pub fn json_test() {
+  json()
+  |> glide.run(text.new("{\"foo\": 5}"), Nil)
+  |> should.equal(Ok(Object(dict.from_list([#("foo", Number(5.0))]))))
+
+  json()
+  |> glide.run(text.new("[1, 2, 3]"), Nil)
+  |> should.equal(Ok(Array([Number(1.0), Number(2.0), Number(3.0)])))
+
+  json()
+  |> glide.run(text.new("\"foo\""), Nil)
+  |> should.equal(Ok(String("foo")))
+
+  json()
+  |> glide.run(text.new("5"), Nil)
+  |> should.equal(Ok(Number(5.0)))
+
+  json()
+  |> glide.run(text.new("true"), Nil)
+  |> should.equal(Ok(Bool(True)))
+
+  json()
+  |> glide.run(text.new("false"), Nil)
+  |> should.equal(Ok(Bool(False)))
+
+  json()
+  |> glide.run(text.new("null"), Nil)
+  |> should.equal(Ok(Null))
+
+  let all =
+    ["object", "array", "string", "number", "bool", "null"]
+    |> list.map(glide.Msg)
+    |> set.from_list
+  json()
+  |> glide.run(text.new("foo"), Nil)
+  |> should.equal(
+    Error(glide.ParseError(glide.Pos(1, 1), glide.Token("f"), all)),
+  )
 }

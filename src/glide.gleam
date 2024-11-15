@@ -230,7 +230,15 @@ pub fn any() -> Parser(t, t, s, c, e) {
 /// Parse a specific token.
 /// This is a convenience wrapper around `satisfy`.
 pub fn token(token: t) -> Parser(t, t, s, c, e) {
-  satisfy(fn(t) { token == t })
+  fn(in, pos, ctx) {
+    case satisfy(fn(t) { t == token }).run(in, pos, ctx) {
+      Ok(x) -> Ok(x)
+      Error(ParseError(pos2, got, _)) ->
+        Error(ParseError(pos2, got, set.insert(set.new(), Token(token))))
+      Error(e) -> Error(e)
+    }
+  }
+  |> Parser
 }
 
 /// Label a parser.
