@@ -8,10 +8,15 @@ pub type Pos {
   Pos(line: Int, col: Int)
 }
 
+pub type Span {
+  Span(start: Pos, end: Pos)
+  Single(pos: Pos)
+}
+
 /// An error that occurred during parsing.
 pub type ParseError(e, t) {
-  ParseError(pos: Pos, got: ErrorPart(t), expected: Set(ErrorPart(t)))
-  Custom(pos: Pos, value: e)
+  ParseError(span: Span, got: ErrorPart(t), expected: Set(ErrorPart(t)))
+  Custom(span: Span, value: e)
 }
 
 /// An expected or found component of an error.
@@ -41,7 +46,7 @@ pub fn get_token(
 ) -> Result(#(t, ParserInput(t, s), Pos), ParseError(e, t)) {
   case in.get(in.src, pos) {
     Ok(#(t, src, pos2)) -> Ok(#(t, ParserInput(..in, src:), pos2))
-    Error(_) -> Error(ParseError(pos, Msg("EOF"), set.new()))
+    Error(_) -> Error(ParseError(Single(pos), Msg("EOF"), set.new()))
   }
 }
 
@@ -80,12 +85,12 @@ pub fn pure(value: a) -> Parser(a, t, s, c, e) {
 
 /// Fail with a custom error value.
 pub fn fail(error: e) -> Parser(a, t, s, c, e) {
-  Parser(fn(_, pos, _) { Error(Custom(pos, error)) })
+  Parser(fn(_, pos, _) { Error(Custom(Single(pos), error)) })
 }
 
 /// Fail with a message.
 pub fn fail_msg(msg: String) -> Parser(a, t, s, c, e) {
-  Parser(fn(_, pos, _) { Error(ParseError(pos, Msg(msg), set.new())) })
+  Parser(fn(_, pos, _) { Error(ParseError(Single(pos), Msg(msg), set.new())) })
 }
 
 /// Get the current position in the input stream.
@@ -213,7 +218,7 @@ pub fn satisfy(f: fn(t) -> Bool) -> Parser(t, t, s, c, e) {
       Ok(#(t, in2, pos2)) ->
         case f(t) {
           True -> Ok(#(t, in2, pos2, ctx))
-          False -> Error(ParseError(pos, Token(t), set.new()))
+          False -> Error(ParseError(Span(pos, pos2), Token(t), set.new()))
         }
       Error(e) -> Error(e)
     }
@@ -261,10 +266,11 @@ pub fn label(
 ) -> Parser(a, t, s, c, e) {
   fn(in, pos, ctx) {
     let p = f()
-    case p.run(in, pos, ctx) {
-      Error(ParseError(pos2, got, _)) if pos == pos2 ->
-        Error(ParseError(pos2, got, set.insert(set.new(), Msg(name))))
-      x -> x
+    use e <- try(p, in, pos, ctx)
+    case e {
+      ParseError(span, got, _) ->
+        Error(ParseError(span, got, set.insert(set.new(), Msg(name))))
+      c -> Error(c)
     }
   }
   |> Parser
@@ -277,9 +283,35 @@ pub fn eof() -> Parser(Nil, t, s, c, e) {
   fn(in, pos, ctx) {
     case get_token(in, pos) {
       Ok(#(t, _, _)) ->
-        Error(ParseError(pos, Token(t), set.insert(set.new(), Msg("EOF"))))
+        Error(ParseError(
+          Single(pos),
+          Token(t),
+          set.insert(set.new(), Msg("EOF")),
+        ))
       Error(_) -> Ok(#(Nil, in, pos, ctx))
     }
   }
   |> Parser
+}
+
+/// Try to run a parser. When it fails without consuming input, run
+/// the provided function.
+pub fn try(p: Parser(a, t, s, c, e), in: ParserInput(t, s), pos: Pos, ctx: c, f) {
+  case p.run(in, pos, ctx) {
+    Error(e) ->
+      case error_pos(e) == pos {
+        True -> f(e)
+        False -> Error(e)
+      }
+    Ok(x) -> Ok(x)
+  }
+}
+
+pub fn error_pos(err: ParseError(e, t)) -> Pos {
+  case err {
+    ParseError(Span(p, _), _, _) -> p
+    ParseError(Single(p), _, _) -> p
+    Custom(Span(p, _), _) -> p
+    Custom(Single(p), _) -> p
+  }
 }

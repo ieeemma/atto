@@ -3,6 +3,7 @@ import gleeunit/should
 import glide
 import glide/ops
 import glide/text
+import glide_test.{span_at}
 
 pub fn maybe_test() {
   ops.maybe(glide.token("5"))
@@ -37,7 +38,7 @@ pub fn some_test() {
   |> glide.run(text.new("666"), Nil)
   |> should.equal(
     Error(glide.ParseError(
-      glide.Pos(1, 1),
+      span_at(1, 1),
       glide.Token("6"),
       set.insert(set.new(), glide.Token("5")),
     )),
@@ -57,7 +58,7 @@ pub fn choice_test() {
   |> glide.run(text.new("7"), Nil)
   |> should.equal(
     Error(glide.ParseError(
-      glide.Pos(1, 1),
+      span_at(1, 1),
       glide.Token("7"),
       set.from_list([glide.Token("5"), glide.Token("6")]),
     )),
@@ -73,7 +74,7 @@ pub fn sep1_test() {
   |> glide.run(text.new("5,5,6"), Nil)
   |> should.equal(
     Error(glide.ParseError(
-      glide.Pos(1, 5),
+      span_at(1, 5),
       glide.Token("6"),
       set.insert(set.new(), glide.Token("5")),
     )),
@@ -83,7 +84,7 @@ pub fn sep1_test() {
   |> glide.run(text.new("6"), Nil)
   |> should.equal(
     Error(glide.ParseError(
-      glide.Pos(1, 1),
+      span_at(1, 1),
       glide.Token("6"),
       set.insert(set.new(), glide.Token("5")),
     )),
@@ -99,7 +100,7 @@ pub fn sep_test() {
   |> glide.run(text.new("5,5,6"), Nil)
   |> should.equal(
     Error(glide.ParseError(
-      glide.Pos(1, 5),
+      span_at(1, 5),
       glide.Token("6"),
       set.insert(set.new(), glide.Token("5")),
     )),
@@ -119,7 +120,7 @@ pub fn between_test() {
   |> glide.run(text.new("5"), Nil)
   |> should.equal(
     Error(glide.ParseError(
-      glide.Pos(1, 1),
+      span_at(1, 1),
       glide.Token("5"),
       set.insert(set.new(), glide.Token("(")),
     )),

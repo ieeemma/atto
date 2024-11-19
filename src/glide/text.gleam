@@ -38,7 +38,13 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
   case regex.from_string("^" <> regex) {
     Ok(r) -> fn(in: ParserInput(String, String), pos, ctx) {
       case regex.scan(r, in.src) {
-        [] -> Error(glide.ParseError(pos, glide.Msg("Regex failed"), set.new()))
+        [] -> {
+          let span = case glide.get_token(in, pos) {
+            Ok(#(_, _, pos2)) -> glide.Span(pos, pos2)
+            Error(_) -> glide.Single(pos)
+          }
+          Error(glide.ParseError(span, glide.Msg("Regex failed"), set.new()))
+        }
         [m] -> {
           let x = m.content
           let xs = string.drop_left(in.src, string.length(m.content))
@@ -46,7 +52,7 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
           case string.length(x) {
             0 ->
               Error(glide.ParseError(
-                pos,
+                glide.Single(pos),
                 glide.Msg("Zero-length match"),
                 set.new(),
               ))
@@ -57,7 +63,7 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
       }
     }
     Error(e) -> fn(_, pos, _) {
-      Error(glide.ParseError(pos, glide.Msg(e.error), set.new()))
+      Error(glide.ParseError(glide.Single(pos), glide.Msg(e.error), set.new()))
     }
   }
   |> glide.Parser

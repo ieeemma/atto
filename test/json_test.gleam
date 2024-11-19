@@ -10,6 +10,8 @@ import glide.{type Parser, do, drop, pure}
 import glide/ops
 import glide/text
 
+import glide_test.{span_at}
+
 pub type Json {
   Object(dict.Dict(String, Json))
   Array(List(Json))
@@ -159,7 +161,5 @@ pub fn json_test() {
     |> set.from_list
   json()
   |> glide.run(text.new("foo"), Nil)
-  |> should.equal(
-    Error(glide.ParseError(glide.Pos(1, 1), glide.Token("f"), all)),
-  )
+  |> should.equal(Error(glide.ParseError(span_at(1, 1), glide.Token("f"), all)))
 }

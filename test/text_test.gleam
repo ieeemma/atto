@@ -2,6 +2,7 @@ import gleam/set
 import gleeunit/should
 import glide
 import glide/text
+import glide_test.{single_at, span_at}
 
 pub fn text_test() {
   let in = text.new("Hello, world!")
@@ -24,18 +25,14 @@ pub fn regex_test() {
   text.match("[0-9]+")
   |> glide.run(text.new("foo"), Nil)
   |> should.equal(
-    Error(glide.ParseError(
-      glide.Pos(1, 1),
-      glide.Msg("Regex failed"),
-      set.new(),
-    )),
+    Error(glide.ParseError(span_at(1, 1), glide.Msg("Regex failed"), set.new())),
   )
 
   text.match("[")
   |> glide.run(text.new("foo"), Nil)
   |> should.equal(
     Error(glide.ParseError(
-      glide.Pos(1, 1),
+      single_at(1, 1),
       glide.Msg(
         "Invalid regular expression: /^[/: Unterminated character class",
       ),

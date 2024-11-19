@@ -24,9 +24,11 @@ pub fn maybe(p: Parser(a, t, s, c, e)) -> Parser(Result(a, Nil), t, s, c, e) {
   fn(in, pos, ctx) {
     case p.run(in, pos, ctx) {
       Ok(#(x, in2, pos2, ctx2)) -> Ok(#(Ok(x), in2, pos2, ctx2))
-      Error(glide.ParseError(pos2, _, _)) if pos == pos2 ->
-        Ok(#(Error(Nil), in, pos, ctx))
-      Error(e) -> Error(e)
+      Error(e) ->
+        case glide.error_pos(e) == pos {
+          True -> Ok(#(Error(Nil), in, pos, ctx))
+          False -> Error(e)
+        }
     }
   }
   |> glide.Parser
@@ -56,15 +58,16 @@ pub fn choice(ps: List(Parser(a, t, s, c, e))) -> Parser(a, t, s, c, e) {
 fn do_choice(ps: List(Parser(a, t, s, c, e)), err, in, pos, ctx) {
   case ps {
     [p, ..ps] -> {
-      case p.run(in, pos, ctx) {
-        Error(glide.ParseError(pos2, _, exp)) if pos == pos2 ->
-          do_choice(ps, set.union(err, exp), in, pos, ctx)
-        x -> x
+      use e <- glide.try(p, in, pos, ctx)
+      let err = case e {
+        glide.ParseError(_, _, exp) -> set.union(err, exp)
+        _ -> err
       }
+      do_choice(ps, err, in, pos, ctx)
     }
     [] -> {
-      use #(t, _, _) <- result.try(glide.get_token(in, pos))
-      Error(glide.ParseError(pos, glide.Token(t), err))
+      use #(t, _, pos2) <- result.try(glide.get_token(in, pos))
+      Error(glide.ParseError(glide.Span(pos, pos2), glide.Token(t), err))
     }
   }
 }
