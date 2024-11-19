@@ -7,6 +7,7 @@ import gleam/set
 import gleam/string
 import gleeunit/should
 import glide.{type Parser, do, drop, pure}
+import glide/error
 import glide/ops
 import glide/text
 
@@ -157,9 +158,9 @@ pub fn json_test() {
 
   let all =
     ["object", "array", "string", "number", "bool", "null"]
-    |> list.map(glide.Msg)
+    |> list.map(error.Msg)
     |> set.from_list
   json()
   |> glide.run(text.new("foo"), Nil)
-  |> should.equal(Error(glide.ParseError(span_at(1, 1), glide.Token("f"), all)))
+  |> should.equal(Error(error.ParseError(span_at(1, 1), error.Token("f"), all)))
 }

@@ -4,6 +4,7 @@ import gleam/list
 import gleam/result
 import gleam/set
 import glide.{type Parser, do, drop, pure}
+import glide/error
 
 /// Try to apply a parser, returning `Nil` if it fails without consuming input.
 /// 
@@ -60,14 +61,14 @@ fn do_choice(ps: List(Parser(a, t, s, c, e)), err, in, pos, ctx) {
     [p, ..ps] -> {
       use e <- glide.try(p, in, pos, ctx)
       let err = case e {
-        glide.ParseError(_, _, exp) -> set.union(err, exp)
+        error.ParseError(_, _, exp) -> set.union(err, exp)
         _ -> err
       }
       do_choice(ps, err, in, pos, ctx)
     }
     [] -> {
       use #(t, _, pos2) <- result.try(glide.get_token(in, pos))
-      Error(glide.ParseError(glide.Span(pos, pos2), glide.Token(t), err))
+      Error(error.ParseError(error.Span(pos, pos2), error.Token(t), err))
     }
   }
 }
