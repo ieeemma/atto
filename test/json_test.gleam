@@ -11,7 +11,7 @@ import glide/error
 import glide/ops
 import glide/text
 
-import glide_test.{span_at}
+import glide_test.{span_char}
 
 pub type Json {
   Object(dict.Dict(String, Json))
@@ -162,5 +162,7 @@ pub fn json_test() {
     |> set.from_list
   json()
   |> glide.run(text.new("foo"), Nil)
-  |> should.equal(Error(error.ParseError(span_at(1, 1), error.Token("f"), all)))
+  |> should.equal(
+    Error(error.ParseError(span_char(0, 1, 1), error.Token("f"), all)),
+  )
 }

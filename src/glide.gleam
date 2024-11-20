@@ -3,15 +3,35 @@
 import gleam/result
 import gleam/set
 import glide/error.{
-  type ParseError, type Pos, type Span, Custom, Msg, ParseError, Pos, Single,
-  Span, Token,
+  type ParseError, type Pos, type Span, Custom, Msg, ParseError, Pos, Span,
+  Token,
 }
+
+/// Given the original stream and a span, render the span section of the stream
+/// and the before and after context.
+/// This is used for error messages.
+/// Usually, this will return the line that an error occurred on, split around the span.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// let in = text.new("foo bar baz")
+/// let sp = Span(Pos(1, 5), Pos(1, 8))
+/// in.render(in.src, sp)
+/// // -> #("foo ", "bar", "  baz")
+/// ```
+// render: fn(s, Span) -> #(String, String, String),
 
 /// An input to the parser.
 /// This type is parameterised by the token type `t` and the token stream `s`.
-/// It stores a stream value and a function to get the next token from the stream.
 pub type ParserInput(t, s) {
-  ParserInput(src: s, get: fn(s, Pos) -> Result(#(t, s, Pos), Nil))
+  ParserInput(
+    /// The token stream being consumed.
+    src: s,
+    /// Get the next token from the input stream, returning the token, the new stream
+    /// and the new line/column, or an error on EOF.
+    get: fn(s, #(Int, Int)) -> Result(#(t, s, #(Int, Int)), Nil),
+  )
 }
 
 /// Get the next token from the input stream.
@@ -26,9 +46,10 @@ pub fn get_token(
   in: ParserInput(t, s),
   pos: Pos,
 ) -> Result(#(t, ParserInput(t, s), Pos), ParseError(e, t)) {
-  case in.get(in.src, pos) {
-    Ok(#(t, src, pos2)) -> Ok(#(t, ParserInput(..in, src:), pos2))
-    Error(_) -> Error(ParseError(Single(pos), Msg("EOF"), set.new()))
+  case in.get(in.src, #(pos.line, pos.col)) {
+    Ok(#(t, src, #(line, col))) ->
+      Ok(#(t, ParserInput(..in, src:), Pos(pos.idx + 1, line, col)))
+    Error(_) -> Error(ParseError(Span(pos, pos), Msg("EOF"), set.new()))
   }
 }
 
@@ -56,7 +77,7 @@ pub fn run(
   in: ParserInput(t, s),
   ctx: c,
 ) -> Result(a, ParseError(e, t)) {
-  p.run(in, Pos(1, 1), ctx)
+  p.run(in, Pos(0, 1, 1), ctx)
   |> result.map(fn(x) { x.0 })
 }
 
@@ -67,12 +88,14 @@ pub fn pure(value: a) -> Parser(a, t, s, c, e) {
 
 /// Fail with a custom error value.
 pub fn fail(error: e) -> Parser(a, t, s, c, e) {
-  Parser(fn(_, pos, _) { Error(Custom(Single(pos), error)) })
+  Parser(fn(_, pos, _) { Error(Custom(Span(pos, pos), error)) })
 }
 
 /// Fail with a message.
 pub fn fail_msg(msg: String) -> Parser(a, t, s, c, e) {
-  Parser(fn(_, pos, _) { Error(ParseError(Single(pos), Msg(msg), set.new())) })
+  Parser(fn(_, pos, _) {
+    Error(ParseError(Span(pos, pos), Msg(msg), set.new()))
+  })
 }
 
 /// Get the current position in the input stream.
@@ -266,7 +289,7 @@ pub fn eof() -> Parser(Nil, t, s, c, e) {
     case get_token(in, pos) {
       Ok(#(t, _, _)) ->
         Error(ParseError(
-          Single(pos),
+          Span(pos, pos),
           Token(t),
           set.insert(set.new(), Msg("EOF")),
         ))
@@ -281,19 +304,10 @@ pub fn eof() -> Parser(Nil, t, s, c, e) {
 pub fn try(p: Parser(a, t, s, c, e), in: ParserInput(t, s), pos: Pos, ctx: c, f) {
   case p.run(in, pos, ctx) {
     Error(e) ->
-      case error_pos(e) == pos {
+      case e.span.start == pos {
         True -> f(e)
         False -> Error(e)
       }
     Ok(x) -> Ok(x)
-  }
-}
-
-pub fn error_pos(err: ParseError(e, t)) -> Pos {
-  case err {
-    ParseError(Span(p, _), _, _) -> p
-    ParseError(Single(p), _, _) -> p
-    Custom(Span(p, _), _) -> p
-    Custom(Single(p), _) -> p
   }
 }

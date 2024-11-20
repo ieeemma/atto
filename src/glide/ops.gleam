@@ -26,7 +26,7 @@ pub fn maybe(p: Parser(a, t, s, c, e)) -> Parser(Result(a, Nil), t, s, c, e) {
     case p.run(in, pos, ctx) {
       Ok(#(x, in2, pos2, ctx2)) -> Ok(#(Ok(x), in2, pos2, ctx2))
       Error(e) ->
-        case glide.error_pos(e) == pos {
+        case e.span.start == pos {
           True -> Ok(#(Error(Nil), in, pos, ctx))
           False -> Error(e)
         }

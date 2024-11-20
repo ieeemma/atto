@@ -13,10 +13,10 @@ pub fn new(source: String) -> ParserInput(String, String) {
   glide.ParserInput(source, text_get)
 }
 
-fn text_get(s, p: Pos) {
+fn text_get(s, lc: #(Int, Int)) {
   case string.pop_grapheme(s) {
-    Ok(#("\n", ts)) -> Ok(#("\n", ts, error.Pos(p.line + 1, p.col)))
-    Ok(#(t, ts)) -> Ok(#(t, ts, error.Pos(p.line, p.col + 1)))
+    Ok(#("\n", ts)) -> Ok(#("\n", ts, #(lc.0 + 1, 1)))
+    Ok(#(t, ts)) -> Ok(#(t, ts, #(lc.0, lc.1 + 1)))
     Error(_) -> Error(Nil)
   }
 }
@@ -45,7 +45,7 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
       [] -> {
         let span = case glide.get_token(in, pos) {
           Ok(#(_, _, pos2)) -> error.Span(pos, pos2)
-          Error(_) -> error.Single(pos)
+          Error(_) -> error.Span(pos, pos)
         }
         Error(error.ParseError(span, error.Msg("Regex failed"), set.new()))
       }
@@ -56,7 +56,7 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
         case string.length(x) {
           0 ->
             Error(error.ParseError(
-              error.Single(pos),
+              error.Span(pos, pos),
               error.Msg("Zero-length match"),
               set.new(),
             ))
@@ -71,8 +71,9 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
 
 fn advance_pos_string(p: Pos, x) {
   case string.pop_grapheme(x) {
-    Ok(#("\n", x)) -> advance_pos_string(error.Pos(p.line + 1, 1), x)
-    Ok(#(_, x)) -> advance_pos_string(error.Pos(p.line, p.col + 1), x)
+    Ok(#("\n", x)) -> advance_pos_string(error.Pos(p.idx + 1, p.line + 1, 1), x)
+    Ok(#(_, x)) ->
+      advance_pos_string(error.Pos(p.idx + 1, p.line, p.col + 1), x)
     Error(_) -> p
   }
 }

@@ -1,17 +1,13 @@
-// import gleam/dict
-// import gleam/int
-// import gleam/list
-// import gleam/string
 import gleam/set.{type Set}
 
-/// A position in the input stream.
+/// A position in the input stream, with an index, line, and column.
 pub type Pos {
-  Pos(line: Int, col: Int)
+  Pos(idx: Int, line: Int, col: Int)
 }
 
+/// A span of positions in the input stream.
 pub type Span {
   Span(start: Pos, end: Pos)
-  Single(pos: Pos)
 }
 
 /// An error that occurred during parsing.
