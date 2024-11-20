@@ -1,7 +1,6 @@
 import gleam/set
 import gleeunit/should
 import glide
-import glide/error
 import glide/text
 import glide_test.{span_char, span_point}
 
@@ -20,11 +19,11 @@ pub fn text_test() {
 
 pub fn text_render_test() {
   let in = text.new("foo bar baz")
-  let sp = error.Span(error.Pos(4, 1, 5), error.Pos(7, 1, 8))
+  let sp = glide.Span(glide.Pos(4, 1, 5), glide.Pos(7, 1, 8))
   in.render(in.src, sp) |> should.equal(#("foo ", "bar", " baz"))
 
   let in = text.new("foo bar\nbaz quux")
-  let sp = error.Span(error.Pos(4, 1, 5), error.Pos(11, 2, 4))
+  let sp = glide.Span(glide.Pos(4, 1, 5), glide.Pos(11, 2, 4))
   in.render(in.src, sp) |> should.equal(#("foo ", "bar\nbaz", " quux"))
 }
 
@@ -36,9 +35,9 @@ pub fn regex_test() {
   text.match("[0-9]+")
   |> glide.run(text.new("foo"), Nil)
   |> should.equal(
-    Error(error.ParseError(
+    Error(glide.ParseError(
       span_char(0, 1, 1),
-      error.Msg("Regex failed"),
+      glide.Msg("Regex failed"),
       set.new(),
     )),
   )
@@ -46,9 +45,9 @@ pub fn regex_test() {
   text.match("a*")
   |> glide.run(text.new("foo"), Nil)
   |> should.equal(
-    Error(error.ParseError(
+    Error(glide.ParseError(
       span_point(0, 1, 1),
-      error.Msg("Zero-length match"),
+      glide.Msg("Zero-length match"),
       set.new(),
     )),
   )

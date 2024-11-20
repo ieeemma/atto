@@ -4,8 +4,7 @@ import gleam/list
 import gleam/regex
 import gleam/set
 import gleam/string
-import glide.{type Parser, type ParserInput}
-import glide/error.{type Pos, type Span}
+import glide.{type Parser, type ParserInput, type Pos, type Span}
 
 /// Create a new parser input from a string.
 /// Note: currently, this function lacks a JavaScript-specific implementation,
@@ -61,10 +60,10 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
     case regex.scan(r, in.src) {
       [] -> {
         let span = case glide.get_token(in, pos) {
-          Ok(#(_, _, pos2)) -> error.Span(pos, pos2)
-          Error(_) -> error.Span(pos, pos)
+          Ok(#(_, _, pos2)) -> glide.Span(pos, pos2)
+          Error(_) -> glide.Span(pos, pos)
         }
-        Error(error.ParseError(span, error.Msg("Regex failed"), set.new()))
+        Error(glide.ParseError(span, glide.Msg("Regex failed"), set.new()))
       }
       [m] -> {
         let x = m.content
@@ -72,9 +71,9 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
         let p = advance_pos_string(pos, x)
         case string.length(x) {
           0 ->
-            Error(error.ParseError(
-              error.Span(pos, pos),
-              error.Msg("Zero-length match"),
+            Error(glide.ParseError(
+              glide.Span(pos, pos),
+              glide.Msg("Zero-length match"),
               set.new(),
             ))
           _ -> Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
@@ -88,9 +87,9 @@ pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
 
 fn advance_pos_string(p: Pos, x) {
   case string.pop_grapheme(x) {
-    Ok(#("\n", x)) -> advance_pos_string(error.Pos(p.idx + 1, p.line + 1, 1), x)
+    Ok(#("\n", x)) -> advance_pos_string(glide.Pos(p.idx + 1, p.line + 1, 1), x)
     Ok(#(_, x)) ->
-      advance_pos_string(error.Pos(p.idx + 1, p.line, p.col + 1), x)
+      advance_pos_string(glide.Pos(p.idx + 1, p.line, p.col + 1), x)
     Error(_) -> p
   }
 }

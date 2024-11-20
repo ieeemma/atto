@@ -1,11 +1,7 @@
 //// Parser combinators for parsing arbitrary stream types.
 
 import gleam/result
-import gleam/set
-import glide/error.{
-  type ParseError, type Pos, type Span, Custom, Msg, ParseError, Pos, Span,
-  Token,
-}
+import gleam/set.{type Set}
 
 /// An input to the parser.
 /// This type is parameterised by the token type `t` and the token stream `s`.
@@ -31,6 +27,28 @@ pub type ParserInput(t, s) {
     /// ```
     render: fn(s, Span) -> #(String, String, String),
   )
+}
+
+/// A position in the input stream, with an index, line, and column.
+pub type Pos {
+  Pos(idx: Int, line: Int, col: Int)
+}
+
+/// A span of positions in the input stream.
+pub type Span {
+  Span(start: Pos, end: Pos)
+}
+
+/// An error that occurred during parsing.
+pub type ParseError(e, t) {
+  ParseError(span: Span, got: ErrorPart(t), expected: Set(ErrorPart(t)))
+  Custom(span: Span, value: e)
+}
+
+/// An expected or found component of an error.
+pub type ErrorPart(t) {
+  Token(t)
+  Msg(String)
 }
 
 /// Get the next token from the input stream.
