@@ -18,6 +18,16 @@ pub fn text_test() {
   in.get(in.src, pos) |> should.equal(Error(Nil))
 }
 
+pub fn text_render_test() {
+  let in = text.new("foo bar baz")
+  let sp = error.Span(error.Pos(4, 1, 5), error.Pos(7, 1, 8))
+  in.render(in.src, sp) |> should.equal(#("foo ", "bar", " baz"))
+
+  let in = text.new("foo bar\nbaz quux")
+  let sp = error.Span(error.Pos(4, 1, 5), error.Pos(11, 2, 4))
+  in.render(in.src, sp) |> should.equal(#("foo ", "bar\nbaz", " quux"))
+}
+
 pub fn regex_test() {
   text.match("[0-9]+")
   |> glide.run(text.new("452"), Nil)

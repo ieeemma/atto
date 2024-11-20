@@ -1,16 +1,17 @@
 //// Functions for parsing over strings.
 
+import gleam/list
 import gleam/regex
 import gleam/set
 import gleam/string
 import glide.{type Parser, type ParserInput}
-import glide/error.{type Pos}
+import glide/error.{type Pos, type Span}
 
 /// Create a new parser input from a string.
 /// Note: currently, this function lacks a JavaScript-specific implementation,
 /// so performance will be poor.
 pub fn new(source: String) -> ParserInput(String, String) {
-  glide.ParserInput(source, text_get)
+  glide.ParserInput(source, text_get, text_render)
 }
 
 fn text_get(s, lc: #(Int, Int)) {
@@ -19,6 +20,22 @@ fn text_get(s, lc: #(Int, Int)) {
     Ok(#(t, ts)) -> Ok(#(t, ts, #(lc.0, lc.1 + 1)))
     Error(_) -> Error(Nil)
   }
+}
+
+fn text_render(s, span: Span) {
+  let lines = string.split(s, "\n")
+  let l1 = get_line(lines, span.start.line - 1)
+  let l2 = get_line(lines, span.end.line - 1)
+  #(
+    string.slice(l1, 0, span.start.col - 1),
+    string.slice(s, span.start.idx, span.end.idx - span.start.idx),
+    string.slice(l2, span.end.col - 1, string.length(l2)),
+  )
+}
+
+fn get_line(s, i) {
+  let assert Ok(l) = list.first(list.drop(s, i))
+  l
 }
 
 /// Parse a regex, returning the matched string.

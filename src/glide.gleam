@@ -7,21 +7,6 @@ import glide/error.{
   Token,
 }
 
-/// Given the original stream and a span, render the span section of the stream
-/// and the before and after context.
-/// This is used for error messages.
-/// Usually, this will return the line that an error occurred on, split around the span.
-/// 
-/// ## Examples
-/// 
-/// ```gleam
-/// let in = text.new("foo bar baz")
-/// let sp = Span(Pos(1, 5), Pos(1, 8))
-/// in.render(in.src, sp)
-/// // -> #("foo ", "bar", "  baz")
-/// ```
-// render: fn(s, Span) -> #(String, String, String),
-
 /// An input to the parser.
 /// This type is parameterised by the token type `t` and the token stream `s`.
 pub type ParserInput(t, s) {
@@ -31,6 +16,20 @@ pub type ParserInput(t, s) {
     /// Get the next token from the input stream, returning the token, the new stream
     /// and the new line/column, or an error on EOF.
     get: fn(s, #(Int, Int)) -> Result(#(t, s, #(Int, Int)), Nil),
+    /// Given the original stream and a span, render the span section of the stream
+    /// and the before and after context.
+    /// This is used for error messages.
+    /// Usually, this will return the line that an error occurred on, split around the span.
+    /// 
+    /// ## Examples
+    /// 
+    /// ```gleam
+    /// let in = text.new("foo bar baz")
+    /// let sp = Span(Pos(1, 5), Pos(1, 8))
+    /// in.render(in.src, sp)
+    /// // -> #("foo ", "bar", "  baz")
+    /// ```
+    render: fn(s, Span) -> #(String, String, String),
   )
 }
 
