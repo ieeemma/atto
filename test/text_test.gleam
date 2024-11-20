@@ -29,14 +29,12 @@ pub fn regex_test() {
     Error(error.ParseError(span_at(1, 1), error.Msg("Regex failed"), set.new())),
   )
 
-  text.match("[")
+  text.match("a*")
   |> glide.run(text.new("foo"), Nil)
   |> should.equal(
     Error(error.ParseError(
       single_at(1, 1),
-      error.Msg(
-        "Invalid regular expression: /^[/: Unterminated character class",
-      ),
+      error.Msg("Zero-length match"),
       set.new(),
     )),
   )

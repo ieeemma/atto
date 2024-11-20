@@ -74,8 +74,8 @@ fn string_inner() {
 fn escape() {
   use <- glide.label("escape")
   ops.choice([
-    text.match("\\\"") |> glide.map(fn(_) { "\"" }),
-    text.match("\\\\") |> glide.map(fn(_) { "\\" }),
+    text.match("\\\\\"") |> glide.map(fn(_) { "\"" }),
+    text.match("\\\\\\\\") |> glide.map(fn(_) { "\\" }),
     text.match("\\/") |> glide.map(fn(_) { "/" }),
     text.match("\\\\b") |> glide.map(fn(_) { "\u{0008}" }),
     text.match("\\\\f") |> glide.map(fn(_) { "\u{000c}" }),

@@ -36,35 +36,34 @@ fn text_get(s, p: Pos) {
 /// // -> Ok(123.456)
 /// ```
 pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
-  case regex.from_string("^" <> regex) {
-    Ok(r) -> fn(in: ParserInput(String, String), pos, ctx) {
-      case regex.scan(r, in.src) {
-        [] -> {
-          let span = case glide.get_token(in, pos) {
-            Ok(#(_, _, pos2)) -> error.Span(pos, pos2)
-            Error(_) -> error.Single(pos)
-          }
-          Error(error.ParseError(span, error.Msg("Regex failed"), set.new()))
+  let r = case regex.from_string("^" <> regex) {
+    Ok(r) -> r
+    Error(e) -> panic as e.error
+  }
+  fn(in: ParserInput(String, String), pos, ctx) {
+    case regex.scan(r, in.src) {
+      [] -> {
+        let span = case glide.get_token(in, pos) {
+          Ok(#(_, _, pos2)) -> error.Span(pos, pos2)
+          Error(_) -> error.Single(pos)
         }
-        [m] -> {
-          let x = m.content
-          let xs = string.drop_left(in.src, string.length(m.content))
-          let p = advance_pos_string(pos, x)
-          case string.length(x) {
-            0 ->
-              Error(error.ParseError(
-                error.Single(pos),
-                error.Msg("Zero-length match"),
-                set.new(),
-              ))
-            _ -> Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
-          }
-        }
-        [_, ..] -> panic as "Multiple scan matches"
+        Error(error.ParseError(span, error.Msg("Regex failed"), set.new()))
       }
-    }
-    Error(e) -> fn(_, pos, _) {
-      Error(error.ParseError(error.Single(pos), error.Msg(e.error), set.new()))
+      [m] -> {
+        let x = m.content
+        let xs = string.drop_left(in.src, string.length(m.content))
+        let p = advance_pos_string(pos, x)
+        case string.length(x) {
+          0 ->
+            Error(error.ParseError(
+              error.Single(pos),
+              error.Msg("Zero-length match"),
+              set.new(),
+            ))
+          _ -> Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
+        }
+      }
+      [_, ..] -> panic as "Multiple scan matches"
     }
   }
   |> glide.Parser
