@@ -10,7 +10,7 @@ import glide.{type Parser, type ParserInput, type Pos, type Span}
 /// Note: currently, this function lacks a JavaScript-specific implementation,
 /// so performance will be poor.
 pub fn new(source: String) -> ParserInput(String, String) {
-  glide.ParserInput(source, text_get, text_render)
+  glide.ParserInput(source, text_get, string.inspect, text_render)
 }
 
 fn text_get(s, lc: #(Int, Int)) {

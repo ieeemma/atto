@@ -12,6 +12,8 @@ pub type ParserInput(t, s) {
     /// Get the next token from the input stream, returning the token, the new stream
     /// and the new line/column, or an error on EOF.
     get: fn(s, #(Int, Int)) -> Result(#(t, s, #(Int, Int)), Nil),
+    /// Produce a string representation of a token.
+    render_token: fn(t) -> String,
     /// Given the original stream and a span, render the span section of the stream
     /// and the before and after context.
     /// This is used for error messages.
@@ -25,7 +27,7 @@ pub type ParserInput(t, s) {
     /// in.render(in.src, sp)
     /// // -> #("foo ", "bar", "  baz")
     /// ```
-    render: fn(s, Span) -> #(String, String, String),
+    render_span: fn(s, Span) -> #(String, String, String),
   )
 }
 
