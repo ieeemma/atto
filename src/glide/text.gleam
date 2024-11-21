@@ -58,14 +58,22 @@ pub fn match(regex: String) -> Parser(String, String, String, c, e) {
   }
   fn(in: ParserInput(String, String), pos, ctx) {
     case regex.scan(r, in.src) {
-      [] -> {
-        let span = case glide.get_token(in, pos) {
-          Ok(#(_, _, pos2)) -> glide.Span(pos, pos2)
-          Error(_) -> glide.Span(pos, pos)
+      [] ->
+        case glide.get_token(in, pos) {
+          Ok(#(t, _, pos2)) ->
+            Error(glide.ParseError(
+              glide.Span(pos, pos2),
+              glide.Token(t),
+              set.new(),
+            ))
+          Error(_) ->
+            Error(glide.ParseError(
+              glide.Span(pos, pos),
+              glide.Msg("EOF"),
+              set.new(),
+            ))
         }
-        Error(glide.ParseError(span, glide.Msg("Regex failed"), set.new()))
-      }
-      [m] -> {
+      [m, ..] -> {
         let x = m.content
         let xs = string.drop_left(in.src, string.length(m.content))
         let p = advance_pos_string(pos, x)
@@ -79,7 +87,6 @@ pub fn match(regex: String) -> Parser(String, String, String, c, e) {
           _ -> Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
         }
       }
-      [_, ..] -> panic as "Multiple scan matches"
     }
   }
   |> glide.Parser

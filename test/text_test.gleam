@@ -35,11 +35,7 @@ pub fn regex_test() {
   text.match("[0-9]+")
   |> glide.run(text.new("foo"), Nil)
   |> should.equal(
-    Error(glide.ParseError(
-      span_char(0, 1, 1),
-      glide.Msg("Regex failed"),
-      set.new(),
-    )),
+    Error(glide.ParseError(span_char(0, 1, 1), glide.Token("f"), set.new())),
   )
 
   text.match("a*")
