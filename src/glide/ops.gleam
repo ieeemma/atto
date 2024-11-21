@@ -58,7 +58,7 @@ pub fn choice(ps: List(Parser(a, t, s, c, e))) -> Parser(a, t, s, c, e) {
 fn do_choice(ps: List(Parser(a, t, s, c, e)), err, in, pos, ctx) {
   case ps {
     [p, ..ps] -> {
-      use e <- glide.try(p, in, pos, ctx)
+      use e <- glide.recover(p, in, pos, ctx)
       let err = case e {
         glide.ParseError(_, _, exp) -> set.union(err, exp)
         _ -> err

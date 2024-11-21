@@ -290,7 +290,7 @@ pub fn label(
 ) -> Parser(a, t, s, c, e) {
   fn(in, pos, ctx) {
     let p = f()
-    use e <- try(p, in, pos, ctx)
+    use e <- recover(p, in, pos, ctx)
     case e {
       ParseError(span, got, _) ->
         Error(ParseError(span, got, set.insert(set.new(), Msg(name))))
@@ -320,7 +320,13 @@ pub fn eof() -> Parser(Nil, t, s, c, e) {
 
 /// Try to run a parser. When it fails without consuming input, run
 /// the provided function.
-pub fn try(p: Parser(a, t, s, c, e), in: ParserInput(t, s), pos: Pos, ctx: c, f) {
+pub fn recover(
+  p: Parser(a, t, s, c, e),
+  in: ParserInput(t, s),
+  pos: Pos,
+  ctx: c,
+  f,
+) {
   case p.run(in, pos, ctx) {
     Error(e) ->
       case e.span.start == pos {
