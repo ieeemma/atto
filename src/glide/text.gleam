@@ -51,7 +51,7 @@ fn get_line(s, i) {
 /// |> glide.map(result.unwrap(0.0))
 /// // -> Ok(123.456)
 /// ```
-pub fn match(regex: String) -> Parser(String, String, String, Nil, Nil) {
+pub fn match(regex: String) -> Parser(String, String, String, c, e) {
   let r = case regex.from_string("^" <> regex) {
     Ok(r) -> r
     Error(e) -> panic as e.error
