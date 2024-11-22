@@ -41,6 +41,7 @@ fn get_line(s, i) {
 /// Zero-length matches will fail.
 /// Note that a literal backslash in the regex must be double-escaped,
 /// such as `\\\\b` to match the literal string `\b` rather than a word boundary.
+/// Note that zero-width matches can be dangerous, as they can cause infinite loops.
 /// 
 /// ## Examples
 /// 
@@ -77,15 +78,7 @@ pub fn match(regex: String) -> Parser(String, String, String, c, e) {
         let x = m.content
         let xs = string.drop_left(in.src, string.length(m.content))
         let p = advance_pos_string(pos, x)
-        case string.length(x) {
-          0 ->
-            Error(glide.ParseError(
-              glide.Span(pos, pos),
-              glide.Msg("Zero-length match"),
-              set.new(),
-            ))
-          _ -> Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
-        }
+        Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
       }
     }
   }

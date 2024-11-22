@@ -2,7 +2,7 @@ import gleam/set
 import gleeunit/should
 import glide
 import glide/text
-import glide_test.{span_char, span_point}
+import glide_test.{span_char}
 
 pub fn text_test() {
   let in = text.new("Hello, world!")
@@ -36,15 +36,5 @@ pub fn regex_test() {
   |> glide.run(text.new("foo"), Nil)
   |> should.equal(
     Error(glide.ParseError(span_char(0, 1, 1), glide.Token("f"), set.new())),
-  )
-
-  text.match("a*")
-  |> glide.run(text.new("foo"), Nil)
-  |> should.equal(
-    Error(glide.ParseError(
-      span_point(0, 1, 1),
-      glide.Msg("Zero-length match"),
-      set.new(),
-    )),
   )
 }
