@@ -1,7 +1,7 @@
 import gleam/float
 import gleam/int
 import gleam/string
-import glide.{type Parser, do, label, pure, satisfy}
+import glide.{type Parser, do, drop, label, pure, satisfy}
 import glide/ops
 import glide/text.{match}
 
@@ -28,6 +28,20 @@ pub fn newline() {
 pub fn spaces() {
   use <- label("spaces")
   match("[ \t\n]*")
+}
+
+/// Parse zero or more ASCII whitespace characters, returning
+/// a constant value.
+/// This is useful for parsers that need to ignore whitespace.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// glide.match("foo") |> text_utils.ws()
+/// ```
+pub fn ws(x) {
+  use <- drop(spaces())
+  pure(x)
 }
 
 /// Parse one or more ASCII whitespace characters.

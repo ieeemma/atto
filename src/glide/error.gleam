@@ -20,7 +20,7 @@ import glide.{type ParseError, type ParserInput}
 pub fn pretty(
   err: ParseError(e, t),
   in: ParserInput(t, s),
-  color: Bool,
+  color color: Bool,
 ) -> String {
   let color = case color {
     True -> red
