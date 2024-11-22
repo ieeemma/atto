@@ -152,13 +152,21 @@ pub fn float(sign sign: Bool) {
     True -> ops.maybe(match("[+-]"))
     False -> pure(Error(Nil))
   })
-  use n <- do(match("(0|[1-9][0-9]*)(\\.[0-9]*)?"))
+  use n <- do(match("(0|[1-9][0-9]*)\\.[0-9]+"))
   let assert Ok(n) = float.parse(n)
   case s {
     Ok("-") -> float.negate(n)
     _ -> n
   }
   |> pure
+}
+
+/// Parse a signed decimal or float number.
+pub fn number() {
+  ops.choice([
+    float(sign: True),
+    signed(decimal(), int.negate) |> glide.map(int.to_float),
+  ])
 }
 
 /// Given a parser for a number and a negation function, parse a signed number.
