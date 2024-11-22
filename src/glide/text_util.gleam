@@ -31,7 +31,7 @@ pub fn spaces() {
 }
 
 /// Parse zero or more ASCII whitespace characters, returning
-/// a constant value.
+/// a parsed value.
 /// This is useful for parsers that need to ignore whitespace.
 /// 
 /// ## Examples
@@ -39,7 +39,8 @@ pub fn spaces() {
 /// ```gleam
 /// glide.match("foo") |> text_utils.ws()
 /// ```
-pub fn ws(x) {
+pub fn ws(p) {
+  use x <- do(p)
   use <- drop(spaces())
   pure(x)
 }
