@@ -1,5 +1,6 @@
 import gleam/float
 import gleam/int
+import gleam/result
 import gleam/string
 import glide.{type Parser, do, drop, label, pure, satisfy}
 import glide/ops
@@ -163,10 +164,11 @@ pub fn float(sign sign: Bool) {
 
 /// Parse a signed decimal or float number.
 pub fn number() {
-  ops.choice([
-    float(sign: True),
-    signed(decimal(), int.negate) |> glide.map(int.to_float),
-  ])
+  use <- glide.label("number")
+  use n <- do(text.match("\\d+(\\.\\d+)?") |> ws())
+  let assert Ok(n) =
+    result.or(float.parse(n), int.parse(n) |> result.map(int.to_float))
+  pure(n)
 }
 
 /// Given a parser for a number and a negation function, parse a signed number.
