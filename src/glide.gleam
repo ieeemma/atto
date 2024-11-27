@@ -147,7 +147,7 @@ pub fn ctx() -> Parser(c, t, s, c, e) {
 /// 
 /// ```gleam
 /// {
-///   use <- with_ctx(fn(x) { x + 1 })
+///   use <- ctx_put(fn(x) { x + 1 })
 ///   usw x <- ctx()
 ///   pure(x)
 /// }
