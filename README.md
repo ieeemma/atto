@@ -30,6 +30,6 @@ atto.run(number_list, text.new("[1,23,5]", Nil))
 
 ## Resources
 
-- [Quick start guide](./docs/quick-start.md) on writing parsers.
-- [Documentation](https://hexdocs.pm/atto/).
-- [JSON parser example](./test/json_test.gleam) in tests.
+- [Quick start guide](https://hexdocs.pm/atto/quickstart.html) on writing parsers.
+- [Documentation](https://hexdocs.pm/atto/atto.html).
+- [JSON parser example](https://github.com/ieeemma/atto/blob/main/test/json_test.gleam) in tests.
