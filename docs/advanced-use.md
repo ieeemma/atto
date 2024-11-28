@@ -1,6 +1,6 @@
 # Advanced Use
 
-This section covers more advanced features of Glide.
+This section covers more advanced features of Atto.
 Most parsers can be written without these features.
 
 ## Context Value
@@ -13,60 +13,60 @@ This can be implemented with the `ctx` combinator for receiving and `ctx_put` fo
 
 ```gleam
 fn a_and_b() {
-  use <- glide.ctx_put(fn(_) { 0 })
+  use <- atto.ctx_put(fn(_) { 0 })
   use <- drop(ops.many(ops.choice([a(), b()])))
-  use count <- do(glide.ctx())
+  use count <- do(atto.ctx())
   case count == 0 {
     True -> pure(Nil)
-    False -> glide.fail_msg("Expected equal number of a and b")
+    False -> atto.fail_msg("Expected equal number of a and b")
   }
 }
 
 fn a() {
-  use <- drop(glide.token("a"))
-  use <- glide.ctx_put(fn(x) { x + 1 })
+  use <- drop(atto.token("a"))
+  use <- atto.ctx_put(fn(x) { x + 1 })
   pure(Nil)
 }
 
 fn b() {
-  use <- drop(glide.token("b"))
-  use <- glide.ctx_put(fn(x) { x - 1 })
+  use <- drop(atto.token("b"))
+  use <- atto.ctx_put(fn(x) { x - 1 })
   pure(Nil)
 }
 
 a_and_b()
-|> glide.run(text.new("aababbab"), 0)
+|> atto.run(text.new("aababbab"), 0)
 // -> Ok(Nil)
 
 a_and_b()
-|> glide.run(text.new("aababab"), 0)
+|> atto.run(text.new("aababab"), 0)
 // -> Error("Expected equal number of a and b")
 ```
 
 ## Position
 
-The position in the input can be read with the `glide.pos` parser, which consumes no input and returns the current position.
+The position in the input can be read with the `atto.pos` parser, which consumes no input and returns the current position.
 This is useful for attaching position information to AST nodes.
 
 For example:
 
 ```gleam
 type Spanned(a) {
-    Spanned(a, glide.Span)
+    Spanned(a, atto.Span)
 }
 
 fn spanned(p) {
-    use start <- do(glide.pos())
+    use start <- do(atto.pos())
     use x <- do(p)
-    use end <- do(glide.pos())
-    pure(Spanned(x, glide.Span(start, end)))
+    use end <- do(atto.pos())
+    pure(Spanned(x, atto.Span(start, end)))
 }
 ```
 
 ## Custom Streams
 
 Custom stream types are useful when parsing arbitrary data types, or when a lexer step is required.
-The only requirement to produce a custom stream type is to implement a value of the `glide.ParserInput` type.
+The only requirement to produce a custom stream type is to implement a value of the `atto.ParserInput` type.
 
 This type has three functions:
 
@@ -94,4 +94,4 @@ This type has three functions:
 
   If you don't care about prettyprinting errors, this function could return `#("", "", "")` for all inputs.
 
-For a practical example of implementing a stream type, [see how it works for strings](./src/glide/text.gleam#L12).
+For a practical example of implementing a stream type, [see how it works for strings](./src/atto/text.gleam#L12).

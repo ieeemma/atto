@@ -2,9 +2,10 @@ import gleam/float
 import gleam/int
 import gleam/result
 import gleam/string
-import glide.{type Parser, do, drop, label, pure, satisfy}
-import glide/ops
-import glide/text.{match}
+
+import atto.{type Parser, do, drop, label, pure, satisfy}
+import atto/ops
+import atto/text.{match}
 
 // Utils
 
@@ -38,7 +39,7 @@ pub fn spaces() {
 /// ## Examples
 /// 
 /// ```gleam
-/// glide.match("foo") |> text_utils.ws()
+/// atto.match("foo") |> text_utils.ws()
 /// ```
 pub fn ws(p) {
   use x <- do(p)
@@ -106,7 +107,7 @@ pub fn decimal() {
 /// 
 /// ```gleam
 /// {
-///   use <- drop(glide.match("0b"))
+///   use <- drop(atto.match("0b"))
 ///   binary()
 /// }
 /// |> run(text.new("0b10010"), Nil)
@@ -125,7 +126,7 @@ pub fn binary() {
 /// 
 /// ```gleam
 /// {
-///  use <- drop(glide.match("0x"))
+///  use <- drop(atto.match("0x"))
 ///  hexadecimal()
 /// }
 /// |> run(text.new("0x1a"), Nil)
@@ -164,7 +165,7 @@ pub fn float(sign sign: Bool) {
 
 /// Parse a signed decimal or float number.
 pub fn number() {
-  use <- glide.label("number")
+  use <- atto.label("number")
   use n <- do(text.match("\\d+(\\.\\d+)?") |> ws())
   let assert Ok(n) =
     result.or(float.parse(n), int.parse(n) |> result.map(int.to_float))
@@ -196,14 +197,14 @@ pub fn simple_char_lit() {
 pub fn char_lit() {
   use <- label("character literal")
   ops.choice([
-    match("\\\\\"") |> glide.map(fn(_) { "\"" }),
-    match("\\\\\\\\") |> glide.map(fn(_) { "\\" }),
-    match("\\\\f") |> glide.map(fn(_) { "\u{000c}" }),
-    match("\\\\n") |> glide.map(fn(_) { "\u{000a}" }),
-    match("\\\\r") |> glide.map(fn(_) { "\u{000d}" }),
-    match("\\\\t") |> glide.map(fn(_) { "\u{0009}" }),
+    match("\\\\\"") |> atto.map(fn(_) { "\"" }),
+    match("\\\\\\\\") |> atto.map(fn(_) { "\\" }),
+    match("\\\\f") |> atto.map(fn(_) { "\u{000c}" }),
+    match("\\\\n") |> atto.map(fn(_) { "\u{000a}" }),
+    match("\\\\r") |> atto.map(fn(_) { "\u{000d}" }),
+    match("\\\\t") |> atto.map(fn(_) { "\u{0009}" }),
     match("\\\\u\\{[0-9a-fA-F]{4}\\}")
-      |> glide.map(fn(x) {
+      |> atto.map(fn(x) {
         let assert Ok(n) = int.base_parse(string.drop_left(x, 2), 16)
         let assert Ok(cp) = string.utf_codepoint(n)
         string.from_utf_codepoints([cp])
@@ -214,6 +215,6 @@ pub fn char_lit() {
 /// Parse a string literal using the given character parser.
 pub fn string_lit(char: Parser(String, String, String, c, e)) {
   use <- label("string literal")
-  ops.between(glide.token("\""), ops.many(char), glide.token("\""))
-  |> glide.map(string.concat)
+  ops.between(atto.token("\""), ops.many(char), atto.token("\""))
+  |> atto.map(string.concat)
 }

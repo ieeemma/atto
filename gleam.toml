@@ -1,8 +1,8 @@
-name = "glide"
+name = "atto"
 version = "1.0.0"
 description = "Robust and extensible parser combinators for Gleam"
 licences = ["MIT"]
-repository = { type = "github", user = "ieeemma", repo = "glide" }
+repository = { type = "github", user = "ieeemma", repo = "atto" }
 
 [documentation]
 pages = [

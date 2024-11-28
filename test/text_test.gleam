@@ -1,8 +1,9 @@
 import gleam/set
 import gleeunit/should
-import glide
-import glide/text
-import glide_test.{span_char}
+
+import atto
+import atto/text
+import atto_test.{span_char}
 
 pub fn text_test() {
   let in = text.new("Hello, world!")
@@ -19,22 +20,22 @@ pub fn text_test() {
 
 pub fn text_render_test() {
   let in = text.new("foo bar baz")
-  let sp = glide.Span(glide.Pos(4, 1, 5), glide.Pos(7, 1, 8))
+  let sp = atto.Span(atto.Pos(4, 1, 5), atto.Pos(7, 1, 8))
   in.render_span(in.src, sp) |> should.equal(#("foo ", "bar", " baz"))
 
   let in = text.new("foo bar\nbaz quux")
-  let sp = glide.Span(glide.Pos(4, 1, 5), glide.Pos(11, 2, 4))
+  let sp = atto.Span(atto.Pos(4, 1, 5), atto.Pos(11, 2, 4))
   in.render_span(in.src, sp) |> should.equal(#("foo ", "bar\nbaz", " quux"))
 }
 
 pub fn regex_test() {
   text.match("[0-9]+")
-  |> glide.run(text.new("452"), Nil)
+  |> atto.run(text.new("452"), Nil)
   |> should.equal(Ok("452"))
 
   text.match("[0-9]+")
-  |> glide.run(text.new("foo"), Nil)
+  |> atto.run(text.new("foo"), Nil)
   |> should.equal(
-    Error(glide.ParseError(span_char(0, 1, 1), glide.Token("f"), set.new())),
+    Error(atto.ParseError(span_char(0, 1, 1), atto.Token("f"), set.new())),
   )
 }

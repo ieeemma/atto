@@ -4,13 +4,14 @@ import gleam/list
 import gleam/regex
 import gleam/set
 import gleam/string
-import glide.{type Parser, type ParserInput, type Pos, type Span}
+
+import atto.{type Parser, type ParserInput, type Pos, type Span}
 
 /// Create a new parser input from a string.
 /// Note: currently, this function lacks a JavaScript-specific implementation,
 /// so performance will be poor.
 pub fn new(source: String) -> ParserInput(String, String) {
-  glide.ParserInput(source, text_get, string.inspect, text_render)
+  atto.ParserInput(source, text_get, string.inspect, text_render)
 }
 
 fn text_get(s, lc: #(Int, Int)) {
@@ -47,9 +48,9 @@ fn get_line(s, i) {
 /// 
 /// ```gleam
 /// text.match("[0-9]+(\\.[0-9]*)?")
-/// |> glide.run(text.new("123.456"), Nil)
-/// |> glide.map(float.parse)
-/// |> glide.map(result.unwrap(0.0))
+/// |> atto.run(text.new("123.456"), Nil)
+/// |> atto.map(float.parse)
+/// |> atto.map(result.unwrap(0.0))
 /// // -> Ok(123.456)
 /// ```
 pub fn match(regex: String) -> Parser(String, String, String, c, e) {
@@ -60,17 +61,17 @@ pub fn match(regex: String) -> Parser(String, String, String, c, e) {
   fn(in: ParserInput(String, String), pos, ctx) {
     case regex.scan(r, in.src) {
       [] ->
-        case glide.get_token(in, pos) {
+        case atto.get_token(in, pos) {
           Ok(#(t, _, pos2)) ->
-            Error(glide.ParseError(
-              glide.Span(pos, pos2),
-              glide.Token(t),
+            Error(atto.ParseError(
+              atto.Span(pos, pos2),
+              atto.Token(t),
               set.new(),
             ))
           Error(_) ->
-            Error(glide.ParseError(
-              glide.Span(pos, pos),
-              glide.Msg("EOF"),
+            Error(atto.ParseError(
+              atto.Span(pos, pos),
+              atto.Msg("EOF"),
               set.new(),
             ))
         }
@@ -78,18 +79,17 @@ pub fn match(regex: String) -> Parser(String, String, String, c, e) {
         let x = m.content
         let xs = string.drop_left(in.src, string.length(m.content))
         let p = advance_pos_string(pos, x)
-        Ok(#(x, glide.ParserInput(..in, src: xs), p, ctx))
+        Ok(#(x, atto.ParserInput(..in, src: xs), p, ctx))
       }
     }
   }
-  |> glide.Parser
+  |> atto.Parser
 }
 
 fn advance_pos_string(p: Pos, x) {
   case string.pop_grapheme(x) {
-    Ok(#("\n", x)) -> advance_pos_string(glide.Pos(p.idx + 1, p.line + 1, 1), x)
-    Ok(#(_, x)) ->
-      advance_pos_string(glide.Pos(p.idx + 1, p.line, p.col + 1), x)
+    Ok(#("\n", x)) -> advance_pos_string(atto.Pos(p.idx + 1, p.line + 1, 1), x)
+    Ok(#(_, x)) -> advance_pos_string(atto.Pos(p.idx + 1, p.line, p.col + 1), x)
     Error(_) -> p
   }
 }

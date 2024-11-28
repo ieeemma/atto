@@ -1,7 +1,8 @@
 import gleam/list
 import gleam/set
 import gleam/string
-import glide.{type ParseError, type ParserInput}
+
+import atto.{type ParseError, type ParserInput}
 
 /// Prettyprint a parse error for display.
 /// The `in` parameter must be the **original** input to the parser.
@@ -27,7 +28,7 @@ pub fn pretty(
     False -> fn(s) { s }
   }
   let msg = case err {
-    glide.ParseError(_, got, exp) -> {
+    atto.ParseError(_, got, exp) -> {
       let g = pretty_part(got, in)
       let e =
         set.to_list(exp)
@@ -39,7 +40,7 @@ pub fn pretty(
         _ -> "Expected one of " <> e <> ", got " <> g
       }
     }
-    glide.Custom(_, value) -> string.inspect(value)
+    atto.Custom(_, value) -> string.inspect(value)
   }
   let #(before, mid, after) = in.render_span(in.src, err.span)
   let code = before <> color(mid) <> after
@@ -52,8 +53,8 @@ pub fn pretty(
 
 fn pretty_part(part, in: ParserInput(t, s)) {
   case part {
-    glide.Token(t) -> in.render_token(t)
-    glide.Msg(s) -> s
+    atto.Token(t) -> in.render_token(t)
+    atto.Msg(s) -> s
   }
 }
 

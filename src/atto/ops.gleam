@@ -3,7 +3,8 @@
 import gleam/list
 import gleam/result
 import gleam/set
-import glide.{type Parser, do, drop, pure}
+
+import atto.{type Parser, do, drop, pure}
 
 /// Try to apply a parser, returning `Nil` if it fails without consuming input.
 /// 
@@ -31,7 +32,7 @@ pub fn maybe(p: Parser(a, t, s, c, e)) -> Parser(Result(a, Nil), t, s, c, e) {
         }
     }
   }
-  |> glide.Parser
+  |> atto.Parser
 }
 
 /// Try each parser in order, returning the first successful result.
@@ -52,22 +53,22 @@ pub fn maybe(p: Parser(a, t, s, c, e)) -> Parser(Result(a, Nil), t, s, c, e) {
 /// ```
 pub fn choice(ps: List(Parser(a, t, s, c, e))) -> Parser(a, t, s, c, e) {
   fn(in, pos, ctx) { do_choice(ps, set.new(), in, pos, ctx) }
-  |> glide.Parser
+  |> atto.Parser
 }
 
 fn do_choice(ps: List(Parser(a, t, s, c, e)), err, in, pos, ctx) {
   case ps {
     [p, ..ps] -> {
-      use e <- glide.recover(p, in, pos, ctx)
+      use e <- atto.recover(p, in, pos, ctx)
       let err = case e {
-        glide.ParseError(_, _, exp) -> set.union(err, exp)
+        atto.ParseError(_, _, exp) -> set.union(err, exp)
         _ -> err
       }
       do_choice(ps, err, in, pos, ctx)
     }
     [] -> {
-      use #(t, _, pos2) <- result.try(glide.get_token(in, pos))
-      Error(glide.ParseError(glide.Span(pos, pos2), glide.Token(t), err))
+      use #(t, _, pos2) <- result.try(atto.get_token(in, pos))
+      Error(atto.ParseError(atto.Span(pos, pos2), atto.Token(t), err))
     }
   }
 }
@@ -117,7 +118,7 @@ fn do_many(p, acc) {
 /// ```
 pub fn some(p: Parser(a, t, s, c, e)) -> Parser(List(a), t, s, c, e) {
   use x <- do(p)
-  many(p) |> glide.map(fn(xs) { [x, ..xs] })
+  many(p) |> atto.map(fn(xs) { [x, ..xs] })
 }
 
 /// Parse one or more `p` separated by a delimiter.
