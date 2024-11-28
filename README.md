@@ -2,7 +2,7 @@
 
 Robust and extensible parser-combinators for Gleam.
 
-```glide
+```gleam
 fn number() {
   use digits <- do(glide.match("[1-9][0-9]*"))
   let assert Ok(n) = int.from_string(digits)
@@ -19,7 +19,6 @@ fn number_list() {
 
 glide.run(number_list, text.new("[1,23,5]", Nil))
 // -> Ok([1, 23, 5])
-
 ```
 
 ## Features
