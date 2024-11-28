@@ -5,7 +5,10 @@ licences = ["MIT"]
 repository = { type = "github", user = "ieeemma", repo = "glide" }
 
 [documentation]
-pages = [{ title = "Introduction", path = "introduction.html", source = "./INTRO.md" }]
+pages = [
+    { title = "Quickstart guide", path = "quickstart.html", source = "./docs/quick-start.md" },
+    { title = "Advanced use", path = "Advanced.html", source = "./docs/advanced-use.md" },
+]
 
 [dependencies]
 gleam_stdlib = "~> 0.34 or ~> 1.0"
