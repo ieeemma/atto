@@ -1,7 +1,7 @@
 //// Functions for parsing over strings.
 
 import gleam/list
-import gleam/regex
+import gleam/regexp
 import gleam/set
 import gleam/string
 
@@ -54,12 +54,12 @@ fn get_line(s, i) {
 /// // -> Ok(123.456)
 /// ```
 pub fn match(regex: String) -> Parser(String, String, String, c, e) {
-  let r = case regex.from_string("^" <> regex) {
+  let r = case regexp.from_string("^" <> regex) {
     Ok(r) -> r
     Error(e) -> panic as e.error
   }
   fn(in: ParserInput(String, String), pos, ctx) {
-    case regex.scan(r, in.src) {
+    case regexp.scan(r, in.src) {
       [] ->
         case atto.get_token(in, pos) {
           Ok(#(t, _, pos2)) ->
@@ -77,7 +77,7 @@ pub fn match(regex: String) -> Parser(String, String, String, c, e) {
         }
       [m, ..] -> {
         let x = m.content
-        let xs = string.drop_left(in.src, string.length(m.content))
+        let xs = string.drop_start(in.src, string.length(m.content))
         let p = advance_pos_string(pos, x)
         Ok(#(x, atto.ParserInput(..in, src: xs), p, ctx))
       }

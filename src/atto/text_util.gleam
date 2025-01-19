@@ -205,7 +205,7 @@ pub fn char_lit() {
     match("\\\\t") |> atto.map(fn(_) { "\u{0009}" }),
     match("\\\\u\\{[0-9a-fA-F]{4}\\}")
       |> atto.map(fn(x) {
-        let assert Ok(n) = int.base_parse(string.drop_left(x, 2), 16)
+        let assert Ok(n) = int.base_parse(string.drop_start(x, 2), 16)
         let assert Ok(cp) = string.utf_codepoint(n)
         string.from_utf_codepoints([cp])
       }),
