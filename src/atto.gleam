@@ -1,5 +1,6 @@
 //// Parser combinators for parsing arbitrary stream types.
 
+import gleam/option
 import gleam/result
 import gleam/set.{type Set}
 
@@ -335,4 +336,15 @@ pub fn recover(
       }
     Ok(x) -> Ok(x)
   }
+}
+
+/// Try to run a parser. If it fails, backtrack.
+pub fn try(p: Parser(a, t, s, c, e)) -> Parser(option.Option(a), t, s, c, e) {
+  fn(in, pos, ctx) {
+    case p.run(in, pos, ctx) {
+      Ok(#(x, in2, pos2, ctx2)) -> Ok(#(option.Some(x), in2, pos2, ctx2))
+      Error(_) -> Ok(#(option.None, in, pos, ctx))
+    }
+  }
+  |> Parser
 }
