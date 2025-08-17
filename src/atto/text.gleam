@@ -54,7 +54,7 @@ fn get_line(s, i) {
 /// // -> Ok(123.456)
 /// ```
 pub fn match(regex: String) -> Parser(String, String, String, c, e) {
-  let r = case regexp.from_string("^" <> regex) {
+  let r = case regexp.from_string("^(?:" <> regex <> ")") {
     Ok(r) -> r
     Error(e) -> panic as e.error
   }

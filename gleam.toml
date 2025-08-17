@@ -1,5 +1,5 @@
 name = "atto"
-version = "1.2.0"
+version = "1.2.1"
 description = "Robust and extensible parser combinators for Gleam"
 licences = ["MIT"]
 repository = { type = "github", user = "ieeemma", repo = "atto" }
