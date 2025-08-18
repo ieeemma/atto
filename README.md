@@ -1,35 +1,24 @@
 # atto
 
-Robust and extensible parser-combinators for Gleam.
+[![Package Version](https://img.shields.io/hexpm/v/atto)](https://hex.pm/packages/atto)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/atto/)
 
+```sh
+gleam add atto@1
+```
 ```gleam
-fn number() {
-  use digits <- do(atto.match("[1-9][0-9]*"))
-  let assert Ok(n) = int.from_string(digits)
-  n
-}
+import atto
 
-fn number_list() {
-  atto.between(
-    atto.token("["),
-    atto.sep(number, by: atto.token(",")),
-    atto.token("]"),
-  )
+pub fn main() -> Nil {
+  // TODO: An example of the project in use
 }
-
-atto.run(number_list, text.new("[1,23,5]", Nil))
-// -> Ok([1, 23, 5])
 ```
 
-## Features
+Further documentation can be found at <https://hexdocs.pm/atto>.
 
-- Combinators for building parsers, such as `many`, `sep`, and `between`.
-- Beautiful error messages.
-- Custom stream type support, so `atto` works with a lexer step or on non-string data.
-- Custom context value for contextual grammars.
+## Development
 
-## Resources
-
-- [Quick start guide](https://hexdocs.pm/atto/quickstart.html) on writing parsers.
-- [Documentation](https://hexdocs.pm/atto/atto.html).
-- [JSON parser example](https://github.com/ieeemma/atto/blob/main/test/json_test.gleam) in tests.
+```sh
+gleam run   # Run the project
+gleam test  # Run the tests
+```
