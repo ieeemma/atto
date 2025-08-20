@@ -1,27 +1,39 @@
-import gleam/int
 import gleam/option
 import gleam/order
+import gleam/result
 import gleam/set
-import gleam/string
 
+/// The current state of the parser, containing the source `s`,
+/// position `p`, and context `c`.
 pub type State(s, p, c) {
   State(src: s, pos: p, ctx: c)
 }
 
+/// The stream interface, allowing the parser to consume input.
 pub type Stream(t, ts, s, p, c) {
   Stream(
+    /// Pop a token from the stream, advancing the position.
+    /// Returns `Error(Nil)` if the stream is empty.
     get: fn(State(s, p, c)) -> Result(#(t, State(s, p, c)), Nil),
+    /// Get a chunk of tokens from the stream, advancing the position.
+    /// Returns `Error(Nil)` if the stream has fewer tokens than required.
     gets: fn(State(s, p, c), Int) -> Result(#(ts, State(s, p, c)), Nil),
+    /// Get the length of a chunk.
     len: fn(ts) -> Int,
+    /// Compare two positions.
     cmp_pos: fn(p, p) -> order.Order,
+    /// Check if two token chunks are equal.
     eq_toks: fn(ts, ts) -> Bool,
   )
 }
 
+/// A parsing error message, containing the position of the error,
+/// the found token, and the expected set.
 pub type Msg(t, ts, s, p, c, e) {
   Msg(pos: p, found: MsgPart(t, ts, e), expected: set.Set(MsgPart(t, ts, e)))
 }
 
+/// An item in a parsing error message.
 pub type MsgPart(t, ts, e) {
   Token(t)
   Tokens(ts)
@@ -31,7 +43,7 @@ pub type MsgPart(t, ts, e) {
   None
 }
 
-pub fn merge(
+fn merge(
   a: Msg(t, ts, s, p, c, e),
   b: Msg(t, ts, s, p, c, e),
   stream: Stream(t, ts, s, p, c),
@@ -43,11 +55,14 @@ pub fn merge(
   }
 }
 
+/// Did a parser consume input?
 pub type Consumed {
   Consumed
   Empty
 }
 
+/// A reply from running a parser, containing the result of `#(value, new_state)`,
+/// a parsing error message, and a flag indicating if input was consumed.
 pub type Reply(a, t, ts, s, p, c, e) =
   #(Result(#(a, State(s, p, c)), Nil), Msg(t, ts, s, p, c, e), Consumed)
 
@@ -63,6 +78,16 @@ fn merge_into(
   })
 }
 
+/// A parser, parameterized by:
+/// - result `a`
+/// - token `t`
+/// - token chunk `ts`
+/// - source `s`
+/// - position `p`
+/// - context value `c`
+/// - error value `e`
+/// This contains a function to run the parser, advancing the state
+/// and producing a value or error.
 pub type Parser(a, t, ts, s, p, c, e) {
   Parser(
     run: fn(Stream(t, ts, s, p, c), State(s, p, c)) ->
@@ -70,6 +95,15 @@ pub type Parser(a, t, ts, s, p, c, e) {
   )
 }
 
+/// Run a parser against a stream interface and initial state.
+/// On success, this returns `Ok(#(result, final_state))` and on failure
+/// this returns `Error(error_message)`.
+pub fn run(p: Parser(a, t, ts, s, p, c, e), stream, state) {
+  let #(res, msg, _) = p.run(stream, state)
+  res |> result.replace_error(msg)
+}
+
+/// A parser that fails and consumes no input.
 pub fn empty() -> Parser(a, t, ts, s, p, c, e) {
   fn(_, state: State(s, p, c)) {
     #(Error(Nil), Msg(state.pos, None, set.new()), Empty)
@@ -77,6 +111,24 @@ pub fn empty() -> Parser(a, t, ts, s, p, c, e) {
   |> Parser
 }
 
+/// A parser that succeeds with a value and consumes no input.
+/// This is often used at the end of a `use` syntax block to
+/// return a value.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// atto.pure(42)
+/// // -> 42
+/// ```
+/// 
+/// ```gleam
+/// {
+///   use x <- atto.bind(...)
+///   use xs <- atto.bind(atto.many(...))
+///   atto.pure([x ..xs])
+/// }
+/// ```
 pub fn pure(x: a) -> Parser(a, t, ts, s, p, c, e) {
   fn(_, state: State(s, p, c)) {
     #(Ok(#(x, state)), Msg(state.pos, None, set.new()), Consumed)
@@ -84,6 +136,25 @@ pub fn pure(x: a) -> Parser(a, t, ts, s, p, c, e) {
   |> Parser
 }
 
+/// Bind the result of a parser to a new parser, allowing parsers to be
+/// chained together.
+/// This is useful with `use` syntax.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// atto.bind(digit(), fn(x) { atto.pure(x + 1) })
+/// // "5" -> 6
+/// ```
+/// 
+/// ```gleam
+/// {
+///   use a <- atto.bind(digit())
+///   use b <- atto.bind(digit())
+///   atto.pure(int.max(a, b))
+/// }
+/// // "64" -> 6
+/// ```
 pub fn bind(
   p: Parser(a, t, ts, s, p, c, e),
   f: fn(a) -> Parser(b, t, ts, s, p, c, e),
@@ -98,6 +169,26 @@ pub fn bind(
   |> Parser
 }
 
+/// Choose between two parsers.
+/// If the first succeeds or fails while consuming input, it is preferred.
+/// To ignore any errors in the first parser, wrap it in [`atto.try`](#try).
+/// 
+/// > Hint: The function [`atto.one_of`](#one_of) is usually preferred over `choice`.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// atto.choice(atto.char("foo"), atto.char("bar"))
+/// // "bar" -> "bar"
+/// ```
+/// 
+/// ```gleam
+/// atto.choice(
+///   // `try` is required to backtrack even if one `a` has been parsed.
+///   atto.many(atto.char("a")) |> atto.try,
+///   atto.string("abc"),
+/// )
+/// ```
 pub fn choice(
   a: Parser(a, t, ts, s, p, c, e),
   b: Parser(a, t, ts, s, p, c, e),
@@ -112,6 +203,8 @@ pub fn choice(
   |> Parser
 }
 
+/// Wrap a parser, but backtrack if it fails, allowing arbitrary lookahead.
+/// See [atto.choice](#choice) for more details.
 pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
     case p.run(stream, state) {
@@ -122,6 +215,15 @@ pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
   |> Parser
 }
 
+/// Label a parser with an expected string.
+/// This improves error messages by providing context about what was expected.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.label(atto.char("a"), "an 'a' character")
+/// // "b" -> Msg(expected: "an 'a' character")
+/// ```
 pub fn label(
   p: Parser(a, t, ts, s, p, c, e),
   expected: String,
@@ -139,6 +241,9 @@ pub fn label(
   |> Parser
 }
 
+/// Parse the next token using a match function, and a set of expected results.
+///
+/// > Hint: This function is very low-level, consider [`atto.char`](#char) or [`atto.satisfy`](#satisfy).
 pub fn token(
   f: fn(t) -> Result(a, Nil),
   expected: set.Set(MsgPart(t, ts, e)),
@@ -158,6 +263,14 @@ pub fn token(
   |> Parser
 }
 
+/// Parse an exact chunk of tokens.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.string("foo")
+/// // "foobar" -> "foo"
+/// ```
 pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
   let singleton = fn(a) { set.new() |> set.insert(a) }
   fn(stream: Stream(t, ts, s, p, c), state) {
@@ -177,39 +290,4 @@ pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
     }
   }
   |> Parser
-}
-
-pub fn string_stream() {
-  Stream(
-    fn(state: State(String, Int, c)) {
-      case string.pop_grapheme(state.src) {
-        Ok(#(h, t)) -> Ok(#(h, State(t, state.pos + 1, state.ctx)))
-        Error(_) -> Error(Nil)
-      }
-    },
-    fn(state: State(String, Int, c), n: Int) {
-      let m = string.length(state.src)
-      case n > m {
-        True -> Error(Nil)
-        False -> {
-          let h = string.drop_end(state.src, m - n)
-          let t = string.drop_start(state.src, n)
-          Ok(#(h, State(t, state.pos + n, state.ctx)))
-        }
-      }
-    },
-    string.length,
-    int.compare,
-    fn(a, b) { a == b },
-  )
-}
-
-pub fn parse_test() {
-  let p =
-    choice(
-      try(bind(string("a"), fn(_) { string("b") })),
-      bind(string("a"), fn(_) { string("c") }),
-    )
-
-  p.run(string_stream(), State("az", 0, Nil))
 }
