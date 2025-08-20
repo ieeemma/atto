@@ -256,11 +256,11 @@ pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
 /// // "b" -> Error("expected an 'a' character")
 /// ```
 pub fn label(
-  p: Parser(a, t, ts, s, p, c, e),
   expected: String,
+  f: fn() -> Parser(a, t, ts, s, p, c, e),
 ) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
-    case p.run(stream, state) {
+    case f().run(stream, state) {
       #(Error(_), msg, c) -> #(
         Error(Nil),
         Msg(..msg, expected: set.new() |> set.insert(Name(expected))),
@@ -384,6 +384,20 @@ pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
 /// ```
 pub fn option(p) -> Parser(Result(a, Nil), t, ts, s, p, c, e) {
   choice(p |> map(Ok), pure(Error(Nil)))
+}
+
+/// Optionally parse a value, returning `default` if it failed without
+/// consuming input.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.option_or(atto.char("a"), "default")
+/// // "a" -> Ok("a")
+/// // "b" -> Ok("default")
+/// ```
+pub fn option_or(p, default) -> Parser(a, t, ts, s, p, c, e) {
+  option(p) |> map(fn(x) { result.unwrap(x, default) })
 }
 
 /// Parse zero or more `p`.
