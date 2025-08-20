@@ -53,3 +53,134 @@ fn cmp(a: Pos, b: Pos) {
     x -> x
   }
 }
+
+/// Parse a character from a set of characters.
+pub fn char_of(cs) -> atto.Parser(String, String, ts, s, p, c, e) {
+  atto.satisfy(fn(c) { cs |> string.contains(c) })
+}
+
+/// Parse zero or more whitespace characters.
+pub fn spaces() -> atto.Parser(List(String), String, ts, s, p, c, e) {
+  use <- atto.label("spaces")
+  atto.many(char_of(" \n\r\t"))
+}
+
+/// Parse one or more whitespace characters.
+pub fn spaces_1() -> atto.Parser(List(String), String, ts, s, p, c, e) {
+  use <- atto.label("spaces")
+  atto.many_1(char_of(" \n\r\t"))
+}
+
+/// Parse `p`, then skip trailing whitespace.
+pub fn lexeme(p) -> atto.Parser(a, String, ts, s, p, c, e) {
+  p |> atto.that(spaces())
+}
+
+/// Parse a string, then skip trailing whitespace.
+pub fn symbol(s) -> atto.Parser(String, String, String, s, p, c, e) {
+  atto.string(s) |> lexeme
+}
+
+/// Parse a lowercase ASCII character.
+pub fn lower() -> atto.Parser(String, String, ts, s, p, c, e) {
+  use <- atto.label("lower")
+  atto.satisfy(ord(fn(ch) { ch >= 97 && ch <= 122 }))
+}
+
+/// Parse a uppercase ASCII character.
+pub fn upper() -> atto.Parser(String, String, ts, s, p, c, e) {
+  use <- atto.label("upper")
+  atto.satisfy(ord(fn(ch) { ch >= 65 && ch <= 90 }))
+}
+
+/// Parse an ASCII letter character.
+pub fn alpha() -> atto.Parser(String, String, ts, s, p, c, e) {
+  use <- atto.label("alpha")
+  atto.choice(lower(), upper())
+}
+
+/// Parse an ASCII digit character.
+pub fn digit() -> atto.Parser(String, String, ts, s, p, c, e) {
+  use <- atto.label("digit")
+  atto.satisfy(ord(fn(ch) { ch >= 48 && ch <= 57 }))
+}
+
+/// Parse a non-zero ASCII digit character.
+pub fn digit_nonzero() -> atto.Parser(String, String, ts, s, p, c, e) {
+  use <- atto.label("non-zero digit")
+  atto.satisfy(ord(fn(ch) { ch >= 49 && ch <= 57 }))
+}
+
+/// Parse an ASCII letter or digit character. 
+pub fn alphanum() -> atto.Parser(String, String, ts, s, p, c, e) {
+  use <- atto.label("alphanum")
+  atto.choice(alpha(), digit())
+}
+
+/// Parse an integer.
+pub fn integer() -> atto.Parser(Int, String, ts, s, p, c, e) {
+  use <- atto.label("integer")
+  use cs <- atto.bind(atto.choice(
+    atto.char("0")
+      |> atto.that(atto.not_followed_by(digit()))
+      |> atto.map(fn(x) { [x] }),
+    digit_nonzero()
+      |> atto.both(atto.many(digit()))
+      |> atto.map2(atto.cons),
+  ))
+  string.concat(cs) |> int.parse |> result.unwrap(0) |> atto.pure
+}
+
+/// Parse a floating point number.
+pub fn float() -> atto.Parser(Float, String, ts, s, p, c, e) {
+  use <- atto.label("float")
+  use n <- atto.bind(integer())
+  use _ <- atto.bind(atto.char("."))
+  use m <- atto.bind(integer())
+  atto.pure({ { n * 10 + m } |> int.to_float } /. 10.0)
+}
+
+/// Wrap a parser such that it can be signed.
+/// When it is prefixed by `-`, the result is negated.
+pub fn signed(p, negate) -> atto.Parser(a, String, ts, s, p, c, e) {
+  atto.one_of([
+    atto.char("+") |> atto.this(p),
+    atto.char("-") |> atto.this(p) |> atto.map(negate),
+    p,
+  ])
+}
+
+/// Parse a character literal.
+pub fn char_literal() -> atto.Parser(String, String, String, s, p, c, e) {
+  atto.between(atto.char("'"), inner("'"), atto.char("'"))
+}
+
+/// Parse a string literal.
+pub fn string_literal() -> atto.Parser(String, String, String, s, p, c, e) {
+  atto.between(
+    atto.char("\""),
+    atto.many(inner("\"")) |> atto.map(string.concat),
+    atto.char("\""),
+  )
+}
+
+fn ord(f) {
+  fn(c) {
+    case string.to_utf_codepoints(c) {
+      [x] -> x |> string.utf_codepoint_to_int |> f
+      _ -> False
+    }
+  }
+}
+
+fn inner(end) {
+  atto.one_of([
+    atto.string("\\\"") |> atto.map(fn(_) { "\"" }),
+    atto.string("\\\\") |> atto.map(fn(_) { "\\" }),
+    atto.string("\\f") |> atto.map(fn(_) { "\f" }),
+    atto.string("\\n") |> atto.map(fn(_) { "\n" }),
+    atto.string("\\r") |> atto.map(fn(_) { "\r" }),
+    atto.string("\\t") |> atto.map(fn(_) { "\t" }),
+    atto.satisfy(fn(c) { c != end }),
+  ])
+}

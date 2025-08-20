@@ -600,6 +600,7 @@ pub fn map5(
   pure(f(a, b, c, d, e))
 }
 
-fn cons(x, xs) {
+/// Utility function to prepend an element to a list.
+pub fn cons(x: a, xs: List(a)) -> List(a) {
   [x, ..xs]
 }
