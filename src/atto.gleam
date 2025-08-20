@@ -1,4 +1,4 @@
-import core.{parse_test}
+import atto/core.{parse_test}
 import gleam/io
 import gleam/string
 

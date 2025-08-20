@@ -62,19 +62,25 @@ fn merge_into(
   })
 }
 
-pub type Parser(a, t, ts, s, p, c, e) =
-  fn(Stream(t, ts, s, p, c), State(s, p, c)) -> Reply(a, t, ts, s, p, c, e)
+pub type Parser(a, t, ts, s, p, c, e) {
+  Parser(
+    run: fn(Stream(t, ts, s, p, c), State(s, p, c)) ->
+      Reply(a, t, ts, s, p, c, e),
+  )
+}
 
 pub fn empty() -> Parser(a, t, ts, s, p, c, e) {
   fn(_, state: State(s, p, c)) {
     #(Error(Nil), Msg(state.pos, None, set.new()), Empty)
   }
+  |> Parser
 }
 
 pub fn pure(x: a) -> Parser(a, t, ts, s, p, c, e) {
   fn(_, state: State(s, p, c)) {
     #(Ok(#(x, state)), Msg(state.pos, None, set.new()), Consumed)
   }
+  |> Parser
 }
 
 pub fn bind(
@@ -82,12 +88,13 @@ pub fn bind(
   f: fn(a) -> Parser(b, t, ts, s, p, c, e),
 ) -> Parser(b, t, ts, s, p, c, e) {
   fn(stream, state) {
-    case p(stream, state) {
+    case p.run(stream, state) {
       #(Error(_), err, c) -> #(Error(Nil), err, c)
       #(Ok(#(a, state)), err, c) ->
-        f(a)(stream, state) |> merge_into(stream, err, option.Some(c))
+        f(a).run(stream, state) |> merge_into(stream, err, option.Some(c))
     }
   }
+  |> Parser
 }
 
 pub fn choice(
@@ -95,21 +102,23 @@ pub fn choice(
   b: Parser(a, t, ts, s, p, c, e),
 ) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
-    case a(stream, state) {
+    case a.run(stream, state) {
       #(Error(_), err, Empty) ->
-        b(stream, state) |> merge_into(stream, err, option.None)
+        b.run(stream, state) |> merge_into(stream, err, option.None)
       a -> a
     }
   }
+  |> Parser
 }
 
 pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
-    case p(stream, state) {
+    case p.run(stream, state) {
       #(Error(_), err, Consumed) -> #(Error(Nil), err, Empty)
       a -> a
     }
   }
+  |> Parser
 }
 
 pub fn token(
@@ -128,6 +137,7 @@ pub fn token(
       Error(_) -> #(Error(Nil), Msg(state.pos, EOF, expected), Empty)
     }
   }
+  |> Parser
 }
 
 pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
@@ -148,9 +158,10 @@ pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
       )
     }
   }
+  |> Parser
 }
 
-fn string_stream() {
+pub fn string_stream() {
   Stream(
     fn(state: State(String, Int, c)) {
       case string.pop_grapheme(state.src) {
@@ -182,5 +193,5 @@ pub fn parse_test() {
       bind(string("a"), fn(_) { string("c") }),
     )
 
-  p(string_stream(), State("az", 0, Nil))
+  p.run(string_stream(), State("az", 0, Nil))
 }
