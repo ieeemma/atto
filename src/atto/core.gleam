@@ -26,6 +26,7 @@ pub type MsgPart(t, ts, e) {
   Token(t)
   Tokens(ts)
   Custom(e)
+  Name(String)
   EOF
   None
 }
@@ -115,6 +116,23 @@ pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
     case p.run(stream, state) {
       #(Error(_), err, Consumed) -> #(Error(Nil), err, Empty)
+      a -> a
+    }
+  }
+  |> Parser
+}
+
+pub fn label(
+  p: Parser(a, t, ts, s, p, c, e),
+  expected: String,
+) -> Parser(a, t, ts, s, p, c, e) {
+  fn(stream, state) {
+    case p.run(stream, state) {
+      #(Error(_), msg, c) -> #(
+        Error(Nil),
+        Msg(..msg, expected: set.new() |> set.insert(Name(expected))),
+        c,
+      )
       a -> a
     }
   }
