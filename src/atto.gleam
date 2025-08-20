@@ -22,6 +22,8 @@ pub type Stream(t, ts, s, p, c) {
     len: fn(ts) -> Int,
     /// Compare two positions.
     cmp_pos: fn(p, p) -> order.Order,
+    /// Check if two tokens are equal.
+    eq_tok: fn(t, t) -> Bool,
     /// Check if two token chunks are equal.
     eq_toks: fn(ts, ts) -> Bool,
   )
@@ -107,6 +109,22 @@ pub fn run(p: Parser(a, t, ts, s, p, c, e), stream, state) {
 pub fn empty() -> Parser(a, t, ts, s, p, c, e) {
   fn(_, state: State(s, p, c)) {
     #(Error(Nil), Msg(state.pos, None, set.new()), Empty)
+  }
+  |> Parser
+}
+
+/// A parser that fails with a message and consumes no input.
+pub fn fail(msg) -> Parser(a, t, ts, s, p, c, e) {
+  fn(_, state: State(s, p, c)) {
+    #(Error(Nil), Msg(state.pos, Name(msg), set.new()), Empty)
+  }
+  |> Parser
+}
+
+/// A parser that fails with a custom value and consumes no input.
+pub fn fail_with(value) -> Parser(a, t, ts, s, p, c, e) {
+  fn(_, state: State(s, p, c)) {
+    #(Error(Nil), Msg(state.pos, Custom(value), set.new()), Empty)
   }
   |> Parser
 }
@@ -244,21 +262,70 @@ pub fn label(
 /// Parse the next token using a match function, and a set of expected results.
 ///
 /// > Hint: This function is very low-level, consider [`atto.char`](#char) or [`atto.satisfy`](#satisfy).
-pub fn token(
-  f: fn(t) -> Result(a, Nil),
-  expected: set.Set(MsgPart(t, ts, e)),
-) -> Parser(a, t, ts, s, p, c, e) {
+pub fn token(f, expected) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream: Stream(t, ts, s, p, c), state) {
     case stream.get(state) {
       Ok(#(t, state)) -> {
         let msg = Msg(state.pos, Token(t), expected)
         case f(t) {
           Ok(a) -> #(Ok(#(a, state)), msg, Consumed)
-          Error(_) -> #(Error(Nil), msg, Empty)
+          Error(Nil) -> #(Error(Nil), msg, Empty)
         }
       }
       Error(_) -> #(Error(Nil), Msg(state.pos, EOF, expected), Empty)
     }
+  }
+  |> Parser
+}
+
+/// Parse a token using a predicate function.
+/// 
+/// ## Examples
+/// 
+/// ```
+/// atto.satisfy(fn(t) { t == "x" })
+/// // "x" -> "x"
+/// // "y" -> Msg(expected: "token matching predicate")
+/// ```
+pub fn satisfy(f) -> Parser(t, t, ts, s, p, c, e) {
+  token(
+    fn(t) {
+      case f(t) {
+        True -> Ok(t)
+        False -> Error(Nil)
+      }
+    },
+    set.new() |> set.insert(Name("token matching predicate")),
+  )
+}
+
+/// Parse an exact token.
+/// 
+/// ## Examples
+/// 
+/// ```
+/// atto.char("a")
+/// // "abc" -> "a"
+/// ```
+pub fn char(c) -> Parser(t, t, ts, s, p, c, e) {
+  fn(stream: Stream(t, ts, s, p, c), state) {
+    token(
+      fn(t) {
+        case stream.eq_tok(t, c) {
+          True -> Ok(t)
+          False -> Error(Nil)
+        }
+      },
+      set.new() |> set.insert(Token(c)),
+    ).run(stream, state)
+  }
+  |> Parser
+}
+
+/// Parse any token.
+pub fn any() -> Parser(t, t, ts, s, p, c, e) {
+  fn(stream: Stream(t, ts, s, p, c), state) {
+    token(Ok, set.new() |> set.insert(Name("any token"))).run(stream, state)
   }
   |> Parser
 }
