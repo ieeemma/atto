@@ -30,6 +30,18 @@ pub type Stream(t, ts, s, p, c) {
   )
 }
 
+/// Create a new stream interface.
+pub fn make_stream(
+  get get,
+  gets gets,
+  len len,
+  cmp_pos cmp_pos,
+  eq_tok eq_tok,
+  eq_toks eq_toks,
+) -> Stream(t, ts, s, p, c) {
+  Stream(get, gets, len, cmp_pos, eq_tok, eq_toks)
+}
+
 /// A parsing error message, containing the position of the error,
 /// the found token, and the expected set.
 pub type Msg(t, ts, s, p, c, e) {
