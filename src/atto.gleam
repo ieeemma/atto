@@ -1,3 +1,4 @@
+import gleam/list
 import gleam/option
 import gleam/order
 import gleam/result
@@ -137,7 +138,7 @@ pub fn fail_with(value) -> Parser(a, t, ts, s, p, c, e) {
 /// 
 /// ```gleam
 /// atto.pure(42)
-/// // -> 42
+/// // -> Ok(42)
 /// ```
 /// 
 /// ```gleam
@@ -162,7 +163,7 @@ pub fn pure(x: a) -> Parser(a, t, ts, s, p, c, e) {
 /// 
 /// ```gleam
 /// atto.bind(digit(), fn(x) { atto.pure(x + 1) })
-/// // "5" -> 6
+/// // "5" -> Ok(6)
 /// ```
 /// 
 /// ```gleam
@@ -171,7 +172,7 @@ pub fn pure(x: a) -> Parser(a, t, ts, s, p, c, e) {
 ///   use b <- atto.bind(digit())
 ///   atto.pure(int.max(a, b))
 /// }
-/// // "64" -> 6
+/// // "64" -> Ok(6)
 /// ```
 pub fn bind(
   p: Parser(a, t, ts, s, p, c, e),
@@ -197,7 +198,7 @@ pub fn bind(
 /// 
 /// ```gleam
 /// atto.choice(atto.char("foo"), atto.char("bar"))
-/// // "bar" -> "bar"
+/// // "bar" -> Ok("bar")
 /// ```
 /// 
 /// ```gleam
@@ -240,7 +241,7 @@ pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
 ///
 /// ```gleam
 /// atto.label(atto.char("a"), "an 'a' character")
-/// // "b" -> Msg(expected: "an 'a' character")
+/// // "b" -> Error("expected an 'a' character")
 /// ```
 pub fn label(
   p: Parser(a, t, ts, s, p, c, e),
@@ -284,8 +285,8 @@ pub fn token(f, expected) -> Parser(a, t, ts, s, p, c, e) {
 /// 
 /// ```
 /// atto.satisfy(fn(t) { t == "x" })
-/// // "x" -> "x"
-/// // "y" -> Msg(expected: "token matching predicate")
+/// // "x" -> Ok("x")
+/// // "y" -> Error("expected token matching predicate")
 /// ```
 pub fn satisfy(f) -> Parser(t, t, ts, s, p, c, e) {
   token(
@@ -305,7 +306,7 @@ pub fn satisfy(f) -> Parser(t, t, ts, s, p, c, e) {
 /// 
 /// ```
 /// atto.char("a")
-/// // "abc" -> "a"
+/// // "abc" -> Ok("a")
 /// ```
 pub fn char(c) -> Parser(t, t, ts, s, p, c, e) {
   fn(stream: Stream(t, ts, s, p, c), state) {
@@ -336,7 +337,7 @@ pub fn any() -> Parser(t, t, ts, s, p, c, e) {
 ///
 /// ```gleam
 /// atto.string("foo")
-/// // "foobar" -> "foo"
+/// // "foobar" -> Ok("foo")
 /// ```
 pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
   let singleton = fn(a) { set.new() |> set.insert(a) }
@@ -357,4 +358,222 @@ pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
     }
   }
   |> Parser
+}
+
+/// Optionally parse a value, returning `Error(Nil)` if it failed without
+/// consuming input.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.option(atto.char("a"))
+/// // "a" -> Ok("a")
+/// // "b" -> Error(Nil)
+/// ```
+pub fn option(p) -> Parser(Result(a, Nil), t, ts, s, p, c, e) {
+  choice(p |> map(Ok), pure(Error(Nil)))
+}
+
+/// Parse zero or more `p`.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.many(atto.char("a"))
+/// // "aaa" -> Ok(["a", "a", "a"])
+/// // "b" -> Ok([])
+/// ```
+pub fn many(p) -> Parser(List(a), t, ts, s, p, c, e) {
+  choice(many_1(p), pure([]))
+}
+
+/// Parse one or more `p`.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.many_1(atto.char("a"))
+/// // "aaa" -> Ok(["a", "a", "a"])
+/// // "b" -> Error("expected 'a'"")
+/// ```
+pub fn many_1(p) -> Parser(List(a), t, ts, s, p, c, e) {
+  p |> both(many(p)) |> map2(cons)
+}
+
+/// Parse zero or more `p` separated by `sep`.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.sep_by(atto.char("a"), atto.char(","))
+/// // "a,a,a" -> Ok(["a", "a", "a"])
+/// // "b" -> Ok([])
+/// ```
+pub fn sep_by(p, sep) -> Parser(List(a), t, ts, s, p, c, e) {
+  choice(sep_by_1(p, sep), pure([]))
+}
+
+/// Parse one or more `p` separated by `sep`.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.sep_by_1(atto.char("a"), atto.char(","))
+/// // "a,a,a" -> Ok(["a", "a", "a"])
+/// // "b" -> Error("expected 'a'")
+/// ```
+pub fn sep_by_1(p, sep) -> Parser(List(a), t, ts, s, p, c, e) {
+  p |> both(many(many(sep |> this(p)))) |> map2(cons)
+}
+
+/// Parse zero or more `p` separated and ended by `sep`.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.end_by(atto.char("a"), atto.char(";"))
+/// // "a;a;a;" -> Ok(["a", "a", "a"])
+/// // "b" -> Ok([])
+/// ```
+pub fn end_by(p, sep) -> Parser(List(a), t, ts, s, p, c, e) {
+  many(p |> that(sep))
+}
+
+/// Parse one or more `p` separated and ended by `sep`.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.end_by_1(atto.char("a"), atto.char(";"))
+/// // "a;a;a;" -> Ok(["a", "a", "a"])
+/// // "b" -> Error("expected 'a'")
+/// ```
+pub fn end_by_1(p, sep) -> Parser(List(a), t, ts, s, p, c, e) {
+  many_1(p |> that(sep))
+}
+
+/// Parse `p` surrounded by `before` and `after`.
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.between(atto.char("("), atto.char("a"), atto.char(")"))
+/// // "(a)" -> Ok("a")
+/// // "(b)" -> Error("expected 'a'")
+/// ```
+pub fn between(before, p, after) -> Parser(a, t, ts, s, p, c, e) {
+  before |> this(p) |> that(after)
+}
+
+/// Parse the first success of a list of parsers.
+/// If any parser fails while consuming input, that error is returned.
+/// 
+/// > Hint: this is a fold over [`atto.choice`](#choice) and [`atto.empty`](#empty).
+/// 
+/// ## Examples
+///
+/// ```gleam
+/// atto.one_of([atto.char("a"), atto.char("b"), atto.char("c")])
+/// // "a" -> Ok("a")
+/// // "b" -> Ok("b")
+/// // "d" -> Error("expected a, b, or, c")
+pub fn one_of(ps) -> Parser(a, t, ts, s, p, c, e) {
+  list.fold_right(ps, empty(), choice)
+}
+
+/// Parse a list of parsers and collect their results.
+/// If any parser fails, that error is returned.
+/// 
+/// > Hint: this is a fold over [`atto.bind`](#bind).
+pub fn seq(ps: List(Parser(a, t, ts, s, p, c, e))) {
+  list.fold_right(ps, pure([]), fn(acc, p) { p |> both(acc) |> map2(cons) })
+}
+
+/// Parse negative lookahead. This parser succeeds only if `p` fails.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// atto.char("a") |> atto.not_followed_by
+/// // "a" -> Error()
+/// // "b" -> Ok(Nil)
+/// ```
+pub fn not_followed_by(p) -> Parser(Nil, t, ts, s, p, c, e) {
+  choice(try(p) |> bind(fn(_) { empty() }), pure(Nil))
+}
+
+/// Parse two parsers, returning the second result.
+pub fn this(p, q: Parser(a, t, ts, s, p, c, e)) {
+  use _ <- bind(p)
+  use x <- bind(q)
+  pure(x)
+}
+
+/// Parse two parsers, returning the first result.
+pub fn that(p: Parser(a, t, ts, s, p, c, e), q) {
+  use x <- bind(p)
+  use _ <- bind(q)
+  pure(x)
+}
+
+/// Parse two parsers, returning both results.
+pub fn both(p, q) {
+  use x <- bind(p)
+  use y <- bind(q)
+  pure(#(x, y))
+}
+
+/// Apply a function to the result of a parser.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// digit() |> atto.map(fn(x) { x * 2 })
+/// // "5" -> Ok(10)
+/// ```
+pub fn map(
+  p: Parser(a, t, ts, s, p, c, e),
+  f: fn(a) -> b,
+) -> Parser(b, t, ts, s, p, c, e) {
+  bind(p, fn(a) { pure(f(a)) })
+}
+
+/// Apply a function to a nested parse result.
+pub fn map2(
+  p: Parser(#(a1, a2), t, ts, s, p, c, e),
+  f: fn(a1, a2) -> b,
+) -> Parser(b, t, ts, s, p, c, e) {
+  use #(a, b) <- bind(p)
+  pure(f(a, b))
+}
+
+/// Apply a function to a nested parse result.
+pub fn map3(
+  p: Parser(#(#(a1, a2), a3), t, ts, s, p, c, e),
+  f: fn(a1, a2, a3) -> b,
+) -> Parser(b, t, ts, s, p, c, e) {
+  use #(#(a, b), c) <- bind(p)
+  pure(f(a, b, c))
+}
+
+/// Apply a function to a nested parse result.
+pub fn map4(
+  p: Parser(#(#(#(a1, a2), a3), a4), t, ts, s, p, c, e),
+  f: fn(a1, a2, a3, a4) -> b,
+) -> Parser(b, t, ts, s, p, c, e) {
+  use #(#(#(a, b), c), d) <- bind(p)
+  pure(f(a, b, c, d))
+}
+
+/// Apply a function to a nested parse result.
+pub fn map5(
+  p: Parser(#(#(#(#(a1, a2), a3), a4), a5), t, ts, s, p, c, e),
+  f: fn(a1, a2, a3, a4, a5) -> b,
+) -> Parser(b, t, ts, s, p, c, e) {
+  use #(#(#(#(a, b), c), d), e) <- bind(p)
+  pure(f(a, b, c, d, e))
+}
+
+fn cons(x, xs) {
+  [x, ..xs]
 }
