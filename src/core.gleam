@@ -47,39 +47,34 @@ pub type Consumed {
   Empty
 }
 
-pub type Reply(a, t, ts, s, p, c, e) {
-  Yes(result: a, state: State(s, p, c), msg: Msg(t, ts, s, p, c, e))
-  No(msg: Msg(t, ts, s, p, c, e))
-}
-
-pub type ParseResult(a, t, ts, s, p, c, e) =
-  #(Reply(a, t, ts, s, p, c, e), Consumed)
+pub type Reply(a, t, ts, s, p, c, e) =
+  #(Result(#(a, State(s, p, c)), Nil), Msg(t, ts, s, p, c, e), Consumed)
 
 fn merge_into(
-  result: ParseResult(a, t, ts, s, p, c, e),
+  reply: Reply(a, t, ts, s, p, c, e),
   stream: Stream(t, ts, s, p, c),
-  msg1: Msg(t, ts, s, p, c, e),
-  c1: option.Option(Consumed),
-) -> ParseResult(a, t, ts, s, p, c, e) {
-  case result {
-    #(Yes(_, _, msg2) as y, c2) -> #(
-      Yes(..y, msg: merge(msg1, msg2, stream)),
-      c2,
-    )
-    #(No(msg2), c2) -> #(No(merge(msg1, msg2, stream)), option.unwrap(c1, c2))
-  }
+  m: Msg(t, ts, s, p, c, e),
+  c: option.Option(Consumed),
+) -> Reply(a, t, ts, s, p, c, e) {
+  #(reply.0, merge(m, reply.1, stream), case reply.0 {
+    Ok(_) -> reply.2
+    Error(_) -> option.unwrap(c, reply.2)
+  })
 }
 
 pub type Parser(a, t, ts, s, p, c, e) =
-  fn(Stream(t, ts, s, p, c), State(s, p, c)) ->
-    ParseResult(a, t, ts, s, p, c, e)
+  fn(Stream(t, ts, s, p, c), State(s, p, c)) -> Reply(a, t, ts, s, p, c, e)
 
 pub fn empty() -> Parser(a, t, ts, s, p, c, e) {
-  fn(_, state: State(s, p, c)) { #(No(Msg(state.pos, None, set.new())), Empty) }
+  fn(_, state: State(s, p, c)) {
+    #(Error(Nil), Msg(state.pos, None, set.new()), Empty)
+  }
 }
 
 pub fn pure(x: a) -> Parser(a, t, ts, s, p, c, e) {
-  fn(_, state) { #(Yes(x, state, Msg(state.pos, None, set.new())), Consumed) }
+  fn(_, state: State(s, p, c)) {
+    #(Ok(#(x, state)), Msg(state.pos, None, set.new()), Consumed)
+  }
 }
 
 pub fn bind(
@@ -88,8 +83,8 @@ pub fn bind(
 ) -> Parser(b, t, ts, s, p, c, e) {
   fn(stream, state) {
     case p(stream, state) {
-      #(No(err), c) -> #(No(err), c)
-      #(Yes(a, state, err), c) ->
+      #(Error(_), err, c) -> #(Error(Nil), err, c)
+      #(Ok(#(a, state)), err, c) ->
         f(a)(stream, state) |> merge_into(stream, err, option.Some(c))
     }
   }
@@ -101,8 +96,8 @@ pub fn choice(
 ) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
     case a(stream, state) {
-      #(No(err1), Empty) ->
-        b(stream, state) |> merge_into(stream, err1, option.None)
+      #(Error(_), err, Empty) ->
+        b(stream, state) |> merge_into(stream, err, option.None)
       a -> a
     }
   }
@@ -111,7 +106,7 @@ pub fn choice(
 pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
     case p(stream, state) {
-      #(No(err), Consumed) -> #(No(err), Empty)
+      #(Error(_), err, Consumed) -> #(Error(Nil), err, Empty)
       a -> a
     }
   }
@@ -126,11 +121,11 @@ pub fn token(
       Ok(#(t, state)) -> {
         let msg = Msg(state.pos, Token(t), expected)
         case f(t) {
-          Ok(a) -> #(Yes(a, state, msg), Consumed)
-          Error(_) -> #(No(msg), Empty)
+          Ok(a) -> #(Ok(#(a, state)), msg, Consumed)
+          Error(_) -> #(Error(Nil), msg, Empty)
         }
       }
-      Error(_) -> #(No(Msg(state.pos, EOF, expected)), Empty)
+      Error(_) -> #(Error(Nil), Msg(state.pos, EOF, expected), Empty)
     }
   }
 }
@@ -142,11 +137,15 @@ pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
       Ok(#(ts2, state)) -> {
         let msg = Msg(state.pos, Tokens(ts2), singleton(Tokens(ts1)))
         case stream.eq_toks(ts1, ts2) {
-          True -> #(Yes(ts2, state, msg), Consumed)
-          False -> #(No(msg), Empty)
+          True -> #(Ok(#(ts2, state)), msg, Consumed)
+          False -> #(Error(Nil), msg, Empty)
         }
       }
-      Error(_) -> #(No(Msg(state.pos, EOF, singleton(Tokens(ts1)))), Empty)
+      Error(_) -> #(
+        Error(Nil),
+        Msg(state.pos, EOF, singleton(Tokens(ts1))),
+        Empty,
+      )
     }
   }
 }
