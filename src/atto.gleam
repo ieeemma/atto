@@ -487,7 +487,7 @@ pub fn end_by_1(p, sep) -> Parser(List(a), t, ts, s, p, c, e) {
 /// // "(a)" -> Ok("a")
 /// // "(b)" -> Error("expected 'a'")
 /// ```
-pub fn between(before, p, after) -> Parser(a, t, ts, s, p, c, e) {
+pub fn between(p, before, after) -> Parser(a, t, ts, s, p, c, e) {
   before |> this(p) |> that(after)
 }
 

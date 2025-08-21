@@ -152,16 +152,14 @@ pub fn signed(p, negate) -> atto.Parser(a, String, ts, s, p, c, e) {
 
 /// Parse a character literal.
 pub fn char_literal() -> atto.Parser(String, String, String, s, p, c, e) {
-  atto.between(atto.char("'"), inner("'"), atto.char("'"))
+  inner("'") |> atto.between(atto.char("'"), atto.char("'"))
 }
 
 /// Parse a string literal.
 pub fn string_literal() -> atto.Parser(String, String, String, s, p, c, e) {
-  atto.between(
-    atto.char("\""),
-    atto.many(inner("\"")) |> atto.map(string.concat),
-    atto.char("\""),
-  )
+  atto.many(inner("\""))
+  |> atto.map(string.concat)
+  |> atto.between(atto.char("\""), atto.char("\""))
 }
 
 fn ord(f) {
