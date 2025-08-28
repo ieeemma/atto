@@ -476,6 +476,7 @@ pub fn many(p) -> Parser(List(a), t, ts, s, p, c, e) {
 /// // "b" -> Error("expected 'a'"")
 /// ```
 pub fn many_1(p) -> Parser(List(a), t, ts, s, p, c, e) {
+  use <- lazy()
   p |> both(many(p)) |> map2(cons)
 }
 
