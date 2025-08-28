@@ -66,7 +66,7 @@ fn merge(
   case stream.cmp_pos(a.pos, b.pos) {
     order.Gt -> a
     order.Lt -> b
-    order.Eq -> Msg(..a, expected: set.union(a.expected, b.expected))
+    order.Eq -> Msg(..b, expected: set.union(a.expected, b.expected))
   }
 }
 
@@ -302,10 +302,10 @@ pub fn label_inline(p, expected) {
 pub fn token(f, expected) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream: Stream(t, ts, s, p, c), state) {
     case stream.get(state) {
-      Ok(#(t, state)) -> {
+      Ok(#(t, state2)) -> {
         let msg = Msg(state.pos, Token(t), expected)
         case f(t) {
-          Ok(a) -> #(Ok(#(a, state)), msg, Consumed)
+          Ok(a) -> #(Ok(#(a, state2)), msg, Consumed)
           Error(Nil) -> #(Error(Nil), msg, Empty)
         }
       }
@@ -379,10 +379,10 @@ pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
   let singleton = fn(a) { set.new() |> set.insert(a) }
   fn(stream: Stream(t, ts, s, p, c), state) {
     case stream.gets(state, stream.len(ts1)) {
-      Ok(#(ts2, state)) -> {
+      Ok(#(ts2, state2)) -> {
         let msg = Msg(state.pos, Tokens(ts2), singleton(Tokens(ts1)))
         case stream.eq_toks(ts1, ts2) {
-          True -> #(Ok(#(ts2, state)), msg, Consumed)
+          True -> #(Ok(#(ts2, state2)), msg, Consumed)
           False -> #(Error(Nil), msg, Empty)
         }
       }
