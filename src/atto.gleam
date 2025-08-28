@@ -254,6 +254,16 @@ pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
   |> Parser
 }
 
+/// Lazily evaluate a parser, allowing it to be defined in terms of itself.
+/// 
+/// > Hint: prefer [`atto.label`](#label) as it functions the same.
+pub fn lazy(
+  f: fn() -> Parser(a, t, ts, s, p, c, e),
+) -> Parser(a, t, ts, s, p, c, e) {
+  fn(stream, state) { f().run(stream, state) }
+  |> Parser
+}
+
 /// Label a parser with an expected string.
 /// This improves error messages by providing context about what was expected.
 /// 
@@ -278,6 +288,12 @@ pub fn label(
     }
   }
   |> Parser
+}
+
+/// Label a parser with an expected string.
+/// This variant can be used within a pipe chain.
+pub fn label_inline(p, expected) {
+  label(expected, fn() { p })
 }
 
 /// Parse the next token using a match function, and a set of expected results.
@@ -376,6 +392,35 @@ pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
         Empty,
       )
     }
+  }
+  |> Parser
+}
+
+/// Parse the end of input.
+pub fn eof() -> Parser(Nil, t, ts, s, p, c, e) {
+  fn(stream: Stream(t, ts, s, p, c), state: State(s, p, c)) {
+    case stream.get(state) {
+      Ok(#(t, _)) -> #(
+        Error(Nil),
+        Msg(state.pos, Token(t), set.new() |> set.insert(EOF)),
+        Empty,
+      )
+      Error(_) -> #(Ok(#(Nil, state)), Msg(state.pos, EOF, set.new()), Empty)
+    }
+  }
+  |> Parser
+}
+
+/// Debug the result of a parser.
+pub fn debug(p: Parser(a, t, ts, s, p, c, e)) {
+  fn(stream, state) { echo p.run(stream, state) }
+  |> Parser
+}
+
+/// Debug the state of the parser.
+pub fn debug_state() -> Parser(State(s, p, c), t, ts, s, p, c, e) {
+  fn(_, state: State(s, p, c)) {
+    #(Ok(#(state, state)), Msg(state.pos, None, set.new()), Empty)
   }
   |> Parser
 }
