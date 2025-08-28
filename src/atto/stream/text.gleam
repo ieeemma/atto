@@ -61,6 +61,7 @@ fn cmp(a: Pos, b: Pos) {
 
 /// Parse a character from a set of characters.
 pub fn char_of(cs) -> atto.Parser(String, String, ts, s, p, c, e) {
+  use <- atto.label("one of '" <> cs <> "'")
   atto.satisfy(fn(c) { cs |> string.contains(c) })
 }
 
@@ -84,6 +85,15 @@ pub fn lexeme(p) -> atto.Parser(a, String, ts, s, p, c, e) {
 /// Parse a string, then skip trailing whitespace.
 pub fn symbol(s) -> atto.Parser(String, String, String, s, p, c, e) {
   atto.string(s) |> lexeme
+}
+
+/// Parse a reserved word (eg. keyword) not followed by another identifier.
+pub fn reserved(s) -> atto.Parser(String, String, String, s, p, c, e) {
+  use <- atto.label(s)
+  atto.string(s)
+  |> atto.that(atto.not_followed_by(alphanum()))
+  |> atto.try
+  |> lexeme
 }
 
 /// Parse a lowercase ASCII character.
