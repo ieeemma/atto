@@ -6,18 +6,21 @@ import gleam/order
 import gleam/result
 import gleam/string
 
+pub type Parser(a) =
+  atto.Parser(a, String, String, List(String), Pos, Nil, Nil)
+
 /// Create a state from a string input.
 pub fn new(src: String, ctx: c) -> atto.State(List(String), Pos, c) {
   atto.State(string.to_graphemes(src), Pos(1, 1), ctx)
 }
 
 /// Create a text stream interface.
-pub fn text_stream() -> atto.Stream(String, List(String), List(String), Pos, c) {
+pub fn stream() -> atto.Stream(String, String, List(String), Pos, c) {
   atto.make_stream(
     get: get,
     gets: gets,
     cmp_pos: cmp,
-    len: list.length,
+    len: string.length,
     eq_tok: fn(a, b) { a == b },
     eq_toks: fn(a, b) { a == b },
   )
@@ -38,11 +41,13 @@ fn get(state: atto.State(List(String), Pos, c)) {
 }
 
 fn gets(state: atto.State(List(String), Pos, c), n: Int) {
+  // TODO: this is very inefficient
   gets_rec(state, n, [])
+  |> result.map(fn(x) { #(string.concat(x.0 |> list.reverse), x.1) })
 }
 
 fn gets_rec(state, n, acc) {
-  use <- bool.guard(n == 0, Ok(#([], state)))
+  use <- bool.guard(n == 0, Ok(#(acc, state)))
   use #(t, state) <- result.try(get(state))
   gets_rec(state, n - 1, [t, ..acc])
 }
