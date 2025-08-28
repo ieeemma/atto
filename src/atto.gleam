@@ -111,9 +111,17 @@ pub type Parser(a, t, ts, s, p, c, e) {
 }
 
 /// Run a parser against a stream interface and initial state.
-/// On success, this returns `Ok(#(result, final_state))` and on failure
+/// On success, this returns `Ok(result)` and on failure
 /// this returns `Error(error_message)`.
 pub fn run(p: Parser(a, t, ts, s, p, c, e), stream, state) {
+  let #(res, msg, _) = p.run(stream, state)
+  res |> result.map(fn(x) { x.0 }) |> result.replace_error(msg)
+}
+
+/// Run a parser against a stream interface and initial state.
+/// On success, this returns `Ok(#(result, final_state))` and on failure
+/// this returns `Error(error_message)`.
+pub fn run_state(p: Parser(a, t, ts, s, p, c, e), stream, state) {
   let #(res, msg, _) = p.run(stream, state)
   res |> result.replace_error(msg)
 }
