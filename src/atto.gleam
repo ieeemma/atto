@@ -503,7 +503,7 @@ pub fn sep_by(p, sep) -> Parser(List(a), t, ts, s, p, c, e) {
 /// // "b" -> Error("expected 'a'")
 /// ```
 pub fn sep_by_1(p, sep) -> Parser(List(a), t, ts, s, p, c, e) {
-  p |> both(many(many(sep |> this(p)))) |> map2(cons)
+  p |> both(many(sep |> this(p))) |> map2(cons)
 }
 
 /// Parse zero or more `p` separated and ended by `sep`.
@@ -597,7 +597,10 @@ pub fn that(p: Parser(a, t, ts, s, p, c, e), q) {
 }
 
 /// Parse two parsers, returning both results.
-pub fn both(p, q) {
+pub fn both(
+  p: Parser(a, t, ts, s, p, c, e),
+  q: Parser(b, t, ts, s, p, c, e),
+) -> Parser(#(a, b), t, ts, s, p, c, e) {
   use x <- bind(p)
   use y <- bind(q)
   pure(#(x, y))
