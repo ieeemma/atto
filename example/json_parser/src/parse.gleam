@@ -30,6 +30,7 @@ pub fn json() {
 fn object() {
   use <- atto.label("object")
   text.string_literal()
+  |> text.lexeme
   |> atto.that(text.symbol(":"))
   |> atto.both(json())
   |> atto.sep_by(text.symbol(","))
@@ -57,6 +58,7 @@ fn number() {
     text.float() |> atto.map(Number) |> atto.try,
     text.integer() |> atto.map(int.to_float) |> atto.map(Number),
   )
+  |> text.lexeme
 }
 
 fn bool() {
