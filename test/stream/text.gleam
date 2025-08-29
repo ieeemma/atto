@@ -37,7 +37,7 @@ pub fn char_of_test() {
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("z"),
-      atto.Name("one of 'abc'") |> singleton,
+      atto.Name("one of \"abc\"") |> singleton,
     ))
 }
 
