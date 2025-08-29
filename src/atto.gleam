@@ -285,10 +285,10 @@ pub fn label(
 ) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
     case f().run(stream, state) {
-      #(Error(_), msg, c) -> #(
+      #(Error(_), msg, Empty) -> #(
         Error(Nil),
         Msg(..msg, expected: set.new() |> set.insert(Name(expected))),
-        c,
+        Empty,
       )
       a -> a
     }
