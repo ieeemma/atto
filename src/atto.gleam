@@ -68,7 +68,17 @@ fn merge(
   case stream.cmp_pos(a.pos, b.pos) {
     order.Gt -> a
     order.Lt -> b
-    order.Eq -> Msg(..a, expected: set.union(a.expected, b.expected))
+    // TODO: This is a hack around not_followed_by taking `None` as the preferred
+    // error msg. Will this have any negative consequences?
+    order.Eq ->
+      Msg(
+        a.pos,
+        case a.found {
+          None -> b.found
+          a -> a
+        },
+        set.union(a.expected, b.expected),
+      )
   }
 }
 

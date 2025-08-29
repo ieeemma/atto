@@ -68,7 +68,7 @@ pub fn error_test() {
     |> list.map(atto.Name)
     |> set.from_list
   assert json_file() |> text.run("nullz")
-    == Error(atto.Msg(text.Pos(1, 1), atto.Tokens("n"), expect))
+    == Error(atto.Msg(text.Pos(1, 1), atto.Tokens("nullz"), expect))
 
   assert json_file() |> text.run("{\"foo\": [1, 2, a]}")
     == Error(atto.Msg(text.Pos(1, 16), atto.Token("a"), expect))
