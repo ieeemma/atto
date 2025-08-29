@@ -4,7 +4,7 @@ import gleam/dict
 import gleam/list
 import gleam/set
 import gleeunit
-import json_parser.{json_file}
+import parse.{json_file}
 
 pub fn main() -> Nil {
   gleeunit.main()
@@ -12,21 +12,19 @@ pub fn main() -> Nil {
 
 pub fn object_test() {
   assert json_file() |> text.run("{\"foo\": 5}")
-    == Ok(
-      json_parser.Object(dict.from_list([#("foo", json_parser.Number(5.0))])),
-    )
+    == Ok(parse.Object(dict.from_list([#("foo", parse.Number(5.0))])))
 
   assert json_file() |> text.run("{\"foo\": 5, \"bar\": [1, 2, null]}")
     == Ok(
-      json_parser.Object(
+      parse.Object(
         dict.from_list([
-          #("foo", json_parser.Number(5.0)),
+          #("foo", parse.Number(5.0)),
           #(
             "bar",
-            json_parser.Array([
-              json_parser.Number(1.0),
-              json_parser.Number(2.0),
-              json_parser.Null,
+            parse.Array([
+              parse.Number(1.0),
+              parse.Number(2.0),
+              parse.Null,
             ]),
           ),
         ]),
@@ -37,31 +35,31 @@ pub fn object_test() {
 pub fn array_test() {
   assert json_file() |> text.run("[1, 2, 3]")
     == Ok(
-      json_parser.Array([
-        json_parser.Number(1.0),
-        json_parser.Number(2.0),
-        json_parser.Number(3.0),
+      parse.Array([
+        parse.Number(1.0),
+        parse.Number(2.0),
+        parse.Number(3.0),
       ]),
     )
 
-  assert json_file() |> text.run("[]") == Ok(json_parser.Array([]))
+  assert json_file() |> text.run("[]") == Ok(parse.Array([]))
 }
 
 pub fn string_test() {
-  assert json_file() |> text.run("\"foo\"") == Ok(json_parser.String("foo"))
+  assert json_file() |> text.run("\"foo\"") == Ok(parse.String("foo"))
 }
 
 pub fn number_test() {
-  assert json_file() |> text.run("5") == Ok(json_parser.Number(5.0))
+  assert json_file() |> text.run("5") == Ok(parse.Number(5.0))
 }
 
 pub fn bool_test() {
-  assert json_file() |> text.run("true") == Ok(json_parser.Bool(True))
-  assert json_file() |> text.run("false") == Ok(json_parser.Bool(False))
+  assert json_file() |> text.run("true") == Ok(parse.Bool(True))
+  assert json_file() |> text.run("false") == Ok(parse.Bool(False))
 }
 
 pub fn null_test() {
-  assert json_file() |> text.run("null") == Ok(json_parser.Null)
+  assert json_file() |> text.run("null") == Ok(parse.Null)
 }
 
 pub fn error_test() {
@@ -71,4 +69,7 @@ pub fn error_test() {
     |> set.from_list
   assert json_file() |> text.run("nullz")
     == Error(atto.Msg(text.Pos(1, 1), atto.Tokens("n"), expect))
+
+  assert json_file() |> text.run("{\"foo\": [1, 2, a]}")
+    == Error(atto.Msg(text.Pos(1, 16), atto.Token("a"), expect))
 }
