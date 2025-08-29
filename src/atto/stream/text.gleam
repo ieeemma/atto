@@ -155,13 +155,18 @@ pub fn symbol(s) -> atto.Parser(String, String, String, s, p, c, e) {
   atto.string(s) |> lexeme
 }
 
-/// Parse a reserved word (eg. keyword) not followed by another identifier.
-pub fn reserved(s) -> atto.Parser(String, String, String, s, p, c, e) {
+/// Parse a string not followed by another parser, with optional whitespace.
+pub fn reserved(s, p) -> atto.Parser(String, String, String, s, p, c, e) {
   use <- atto.label(s)
   atto.string(s)
-  |> atto.that(atto.not_followed_by(alphanum()))
+  |> atto.that(atto.not_followed_by(p))
   |> atto.try
   |> lexeme
+}
+
+/// Parse a keyword.
+pub fn keyword(s) -> atto.Parser(String, String, String, s, p, c, e) {
+  reserved(s, alphanum())
 }
 
 /// Parse a lowercase ASCII character.

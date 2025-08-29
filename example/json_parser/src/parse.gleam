@@ -62,12 +62,12 @@ fn number() {
 fn bool() {
   use <- atto.label("bool")
   atto.choice(
-    text.reserved("true") |> atto.this(atto.pure(Bool(True))),
-    text.reserved("false") |> atto.this(atto.pure(Bool(False))),
+    text.keyword("true") |> atto.this(atto.pure(Bool(True))),
+    text.keyword("false") |> atto.this(atto.pure(Bool(False))),
   )
 }
 
 fn null() {
   use <- atto.label("null")
-  text.reserved("null") |> atto.this(atto.pure(Null))
+  text.keyword("null") |> atto.this(atto.pure(Null))
 }

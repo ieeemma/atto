@@ -77,7 +77,7 @@ pub fn symbol_test() {
 }
 
 pub fn reserved_test() {
-  let p = text.reserved("foo")
+  let p = text.reserved("foo", text.alphanum())
 
   assert atto.run_state(p, text.stream(), text.new("foo   ", Nil))
     == Ok(#("foo", atto.State([], text.Pos(1, 7), Nil)))
