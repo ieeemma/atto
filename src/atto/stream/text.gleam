@@ -1,11 +1,14 @@
 import atto
+import atto/error
 import gleam/bool
 import gleam/float
 import gleam/int
 import gleam/list
+import gleam/option
 import gleam/order
 import gleam/result
 import gleam/string
+import gleam/string_tree
 
 /// Specialized `Parser` for simple text parsers without state.
 pub type Parser(a) =
@@ -14,6 +17,21 @@ pub type Parser(a) =
 /// Specialized `run` for simple text parsers.
 pub fn run(p: Parser(a), src: String) {
   atto.run(p, stream(), new(src, Nil))
+}
+
+/// Specialized `error.render` for simple text parsers.
+pub fn render(
+  err: atto.Msg(String, String, List(String), Pos, Nil, Nil),
+  src: String,
+  name: option.Option(String),
+) {
+  error.render(
+    err,
+    renderer(fn(_) { string_tree.new() }),
+    error.pretty_options,
+    string.to_graphemes(src),
+    name,
+  )
 }
 
 /// Create a state from a string input.
@@ -31,6 +49,49 @@ pub fn stream() -> atto.Stream(String, String, List(String), Pos, c) {
     eq_tok: fn(a, b) { a == b },
     eq_toks: fn(a, b) { a == b },
   )
+}
+
+/// Create a text rendering interface.
+pub fn renderer(
+  err: fn(e) -> string_tree.StringTree,
+) -> error.Renderer(String, String, List(String), Pos, c, e) {
+  error.make_renderer(
+    tok: fn(t) { t |> string.inspect |> string_tree.from_string },
+    toks: fn(ts) { ts |> string.inspect |> string_tree.from_string },
+    src: string_tree.from_strings,
+    pos: fn(p: Pos) {
+      string_tree.from_strings([
+        int.to_string(p.line),
+        ":",
+        int.to_string(p.col),
+      ])
+    },
+    err: err,
+    window: fn(p: Pos, part, src) {
+      let n = case part {
+        atto.Token(_) -> 1
+        atto.Tokens(ts) -> string.length(ts)
+        _ -> 0
+      }
+      let assert Ok(line) =
+        string.concat(src)
+        |> string.split("\n")
+        |> list.drop(p.line - 1)
+        |> list.first
+
+      let #(before, line) = split(line, p.col - 1)
+      let #(current, after) = split(line, n)
+      error.Window(
+        before |> string.to_graphemes,
+        current |> string.to_graphemes,
+        after |> string.to_graphemes,
+      )
+    },
+  )
+}
+
+fn split(str, n) {
+  #(string.drop_end(str, string.length(str) - n), string.drop_start(str, n))
 }
 
 pub type Pos {
