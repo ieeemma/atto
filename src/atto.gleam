@@ -589,7 +589,7 @@ pub fn seq(ps: List(Parser(a, t, ts, s, p, c, e))) {
 /// // "b" -> Ok(Nil)
 /// ```
 pub fn not_followed_by(p) -> Parser(Nil, t, ts, s, p, c, e) {
-  choice(try(p) |> bind(fn(_) { empty() }), pure(Nil))
+  choice(try(p) |> bind(fn(_) { empty() }), pure(Nil)) |> try
 }
 
 /// Parse two parsers, returning the second result.
