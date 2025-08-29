@@ -89,7 +89,7 @@ fn merge_into(
   m: Msg(t, ts, s, p, c, e),
   c: option.Option(Consumed),
 ) -> Reply(a, t, ts, s, p, c, e) {
-  #(reply.0, merge(m, reply.1, stream), case reply.0 {
+  #(reply.0, merge(reply.1, m, stream), case reply.0 {
     Ok(_) -> reply.2
     Error(_) -> option.unwrap(c, reply.2)
   })

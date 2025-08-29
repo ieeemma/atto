@@ -242,7 +242,7 @@ pub fn between_test() {
   assert p |> text.run("[1]") == Ok("1")
   assert p |> text.run("[3]") == Ok("3")
   assert p |> text.run("[7")
-    == Error(atto.Msg(text.Pos(1, 3), atto.None, atto.Token("]") |> singleton))
+    == Error(atto.Msg(text.Pos(1, 3), atto.EOF, atto.Token("]") |> singleton))
 }
 
 pub fn one_of_test() {
