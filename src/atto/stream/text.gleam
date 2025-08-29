@@ -1,5 +1,6 @@
 import atto
 import gleam/bool
+import gleam/float
 import gleam/int
 import gleam/list
 import gleam/order
@@ -30,7 +31,7 @@ pub type Pos {
   Pos(line: Int, col: Int)
 }
 
-fn get(state: atto.State(List(String), Pos, c)) {
+pub fn get(state: atto.State(List(String), Pos, c)) {
   use <- bool.guard(list.is_empty(state.src), Error(Nil))
   let assert [t, ..src] = state.src
   let pos = case t {
@@ -40,7 +41,7 @@ fn get(state: atto.State(List(String), Pos, c)) {
   Ok(#(t, atto.State(..state, src: src, pos: pos)))
 }
 
-fn gets(state: atto.State(List(String), Pos, c), n: Int) {
+pub fn gets(state: atto.State(List(String), Pos, c), n: Int) {
   // TODO: this is very inefficient
   gets_rec(state, n, [])
   |> result.map(fn(x) { #(string.concat(x.0 |> list.reverse), x.1) })
@@ -66,15 +67,15 @@ pub fn char_of(cs) -> atto.Parser(String, String, ts, s, p, c, e) {
 }
 
 /// Parse zero or more whitespace characters.
-pub fn spaces() -> atto.Parser(List(String), String, ts, s, p, c, e) {
+pub fn spaces() -> atto.Parser(String, String, ts, s, p, c, e) {
   use <- atto.label("spaces")
-  atto.many(char_of(" \n\r\t"))
+  atto.many(char_of(" \n\r\t")) |> atto.map(string.concat)
 }
 
 /// Parse one or more whitespace characters.
-pub fn spaces_1() -> atto.Parser(List(String), String, ts, s, p, c, e) {
+pub fn spaces_1() -> atto.Parser(String, String, ts, s, p, c, e) {
   use <- atto.label("spaces")
-  atto.many_1(char_of(" \n\r\t"))
+  atto.many_1(char_of(" \n\r\t")) |> atto.map(string.concat)
 }
 
 /// Parse `p`, then skip trailing whitespace.
@@ -132,27 +133,31 @@ pub fn alphanum() -> atto.Parser(String, String, ts, s, p, c, e) {
   atto.choice(alpha(), digit())
 }
 
+fn integer_helper() {
+  atto.choice(
+    atto.char("0")
+      |> atto.that(atto.not_followed_by(digit())),
+    digit_nonzero()
+      |> atto.both(atto.many(digit()))
+      |> atto.map2(atto.cons)
+      |> atto.map(string.concat),
+  )
+}
+
 /// Parse an integer.
 pub fn integer() -> atto.Parser(Int, String, ts, s, p, c, e) {
   use <- atto.label("integer")
-  use cs <- atto.bind(atto.choice(
-    atto.char("0")
-      |> atto.that(atto.not_followed_by(digit()))
-      |> atto.map(fn(x) { [x] }),
-    digit_nonzero()
-      |> atto.both(atto.many(digit()))
-      |> atto.map2(atto.cons),
-  ))
-  string.concat(cs) |> int.parse |> result.unwrap(0) |> atto.pure
+  use n <- atto.bind(integer_helper())
+  n |> int.parse |> result.unwrap(0) |> atto.pure
 }
 
 /// Parse a floating point number.
 pub fn float() -> atto.Parser(Float, String, ts, s, p, c, e) {
   use <- atto.label("float")
-  use n <- atto.bind(integer())
+  use n <- atto.bind(integer_helper())
   use _ <- atto.bind(atto.char("."))
-  use m <- atto.bind(integer())
-  atto.pure({ { n * 10 + m } |> int.to_float } /. 10.0)
+  use m <- atto.bind(integer_helper())
+  { n <> "." <> m } |> float.parse |> result.unwrap(0.0) |> atto.pure
 }
 
 /// Wrap a parser such that it can be signed.
@@ -188,12 +193,13 @@ fn ord(f) {
 
 fn inner(end) {
   atto.one_of([
-    atto.string("\\\"") |> atto.map(fn(_) { "\"" }),
+    atto.string("\\" <> end) |> atto.map(fn(_) { end }),
     atto.string("\\\\") |> atto.map(fn(_) { "\\" }),
     atto.string("\\f") |> atto.map(fn(_) { "\f" }),
     atto.string("\\n") |> atto.map(fn(_) { "\n" }),
     atto.string("\\r") |> atto.map(fn(_) { "\r" }),
     atto.string("\\t") |> atto.map(fn(_) { "\t" }),
+    atto.string("\\") |> atto.this(atto.fail("invalid escape")),
     atto.satisfy(fn(c) { c != end }),
   ])
 }

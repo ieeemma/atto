@@ -4,6 +4,8 @@ import gleam/order
 import gleam/result
 import gleam/set
 
+// TODO: opaque, error printing
+
 /// The current state of the parser, containing the source `s`,
 /// position `p`, and context `c`.
 pub type State(s, p, c) {
@@ -66,7 +68,7 @@ fn merge(
   case stream.cmp_pos(a.pos, b.pos) {
     order.Gt -> a
     order.Lt -> b
-    order.Eq -> Msg(..b, expected: set.union(a.expected, b.expected))
+    order.Eq -> Msg(..a, expected: set.union(a.expected, b.expected))
   }
 }
 
@@ -247,7 +249,11 @@ pub fn choice(
 pub fn try(p: Parser(a, t, ts, s, p, c, e)) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
     case p.run(stream, state) {
-      #(Error(_), err, Consumed) -> #(Error(Nil), err, Empty)
+      #(Error(_), err, Consumed) -> #(
+        Error(Nil),
+        Msg(..err, pos: state.pos),
+        Empty,
+      )
       a -> a
     }
   }
@@ -558,7 +564,11 @@ pub fn between(p, before, after) -> Parser(a, t, ts, s, p, c, e) {
 /// // "b" -> Ok("b")
 /// // "d" -> Error("expected a, b, or, c")
 pub fn one_of(ps) -> Parser(a, t, ts, s, p, c, e) {
-  list.fold_right(ps, empty(), choice)
+  // list.fold_right(ps, empty(), choice)
+  case ps {
+    [p, ..ps] -> list.fold(ps, p, choice)
+    [] -> empty()
+  }
 }
 
 /// Parse a list of parsers and collect their results.
