@@ -129,7 +129,7 @@ fn cmp(a: Pos, b: Pos) {
 
 /// Parse a character from a set of characters.
 pub fn char_of(cs) -> atto.Parser(String, String, ts, s, p, c, e) {
-  use <- atto.label("one of '" <> cs <> "'")
+  use <- atto.label("one of " <> string.inspect(cs))
   atto.satisfy(fn(c) { cs |> string.contains(c) })
 }
 
