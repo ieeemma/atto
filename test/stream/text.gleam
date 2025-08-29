@@ -27,17 +27,13 @@ pub fn gets_test() {
   assert text.gets(text.new("", Nil), 10) == Error(Nil)
 }
 
-fn run(p, src) {
-  atto.run(p, text.stream(), text.new(src, Nil))
-}
-
 fn singleton(x) {
   set.new() |> set.insert(x)
 }
 
 pub fn char_of_test() {
-  assert text.char_of("abc") |> run("a") == Ok("a")
-  assert text.char_of("abc") |> run("z")
+  assert text.char_of("abc") |> text.run("a") == Ok("a")
+  assert text.char_of("abc") |> text.run("z")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("z"),
@@ -46,13 +42,13 @@ pub fn char_of_test() {
 }
 
 pub fn spaces_test() {
-  assert text.spaces() |> run("   ") == Ok("   ")
-  assert text.spaces() |> run("a") == Ok("")
+  assert text.spaces() |> text.run("   ") == Ok("   ")
+  assert text.spaces() |> text.run("a") == Ok("")
 }
 
 pub fn spaces_1_test() {
-  assert text.spaces_1() |> run("   ") == Ok("   ")
-  assert text.spaces_1() |> run("a")
+  assert text.spaces_1() |> text.run("   ") == Ok("   ")
+  assert text.spaces_1() |> text.run("a")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("a"),
@@ -72,7 +68,7 @@ pub fn symbol_test() {
   assert atto.run_state(p, text.stream(), text.new("foo   ", Nil))
     == Ok(#("foo", atto.State([], text.Pos(1, 7), Nil)))
 
-  assert run(p, "bar")
+  assert text.run(p, "bar")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Tokens("bar"),
@@ -86,10 +82,10 @@ pub fn reserved_test() {
   assert atto.run_state(p, text.stream(), text.new("foo   ", Nil))
     == Ok(#("foo", atto.State([], text.Pos(1, 7), Nil)))
 
-  assert run(p, "foobar")
+  assert text.run(p, "foobar")
     == Error(atto.Msg(text.Pos(1, 1), atto.None, atto.Name("foo") |> singleton))
 
-  assert run(p, "bar")
+  assert text.run(p, "bar")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Tokens("bar"),
@@ -100,9 +96,9 @@ pub fn reserved_test() {
 pub fn alpha_test() {
   let p = text.alpha()
 
-  assert run(p, "abc") == Ok("a")
-  assert run(p, "Abc") == Ok("A")
-  assert run(p, "1bc")
+  assert text.run(p, "abc") == Ok("a")
+  assert text.run(p, "Abc") == Ok("A")
+  assert text.run(p, "1bc")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("1"),
@@ -113,8 +109,8 @@ pub fn alpha_test() {
 pub fn digit_test() {
   let p = text.digit()
 
-  assert run(p, "123") == Ok("1")
-  assert run(p, "abc")
+  assert text.run(p, "123") == Ok("1")
+  assert text.run(p, "abc")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("a"),
@@ -125,8 +121,8 @@ pub fn digit_test() {
 pub fn digit_nonzero_test() {
   let p = text.digit_nonzero()
 
-  assert run(p, "123") == Ok("1")
-  assert run(p, "0bc")
+  assert text.run(p, "123") == Ok("1")
+  assert text.run(p, "0bc")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("0"),
@@ -137,9 +133,9 @@ pub fn digit_nonzero_test() {
 pub fn alphanum_test() {
   let p = text.alphanum()
 
-  assert run(p, "abc") == Ok("a")
-  assert run(p, "123") == Ok("1")
-  assert run(p, "!@#")
+  assert text.run(p, "abc") == Ok("a")
+  assert text.run(p, "123") == Ok("1")
+  assert text.run(p, "!@#")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("!"),
@@ -150,9 +146,9 @@ pub fn alphanum_test() {
 pub fn integer_test() {
   let p = text.integer()
 
-  assert run(p, "123") == Ok(123)
-  assert run(p, "0") == Ok(0)
-  assert run(p, "abc")
+  assert text.run(p, "123") == Ok(123)
+  assert text.run(p, "0") == Ok(0)
+  assert text.run(p, "abc")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("a"),
@@ -163,9 +159,9 @@ pub fn integer_test() {
 pub fn float_test() {
   let p = text.float()
 
-  assert run(p, "123.45") == Ok(123.45)
-  assert run(p, "0.0") == Ok(0.0)
-  assert run(p, "abc")
+  assert text.run(p, "123.45") == Ok(123.45)
+  assert text.run(p, "0.0") == Ok(0.0)
+  assert text.run(p, "abc")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("a"),
@@ -176,10 +172,10 @@ pub fn float_test() {
 pub fn signed_test() {
   let p = text.signed(text.integer(), fn(x) { -x })
 
-  assert run(p, "123") == Ok(123)
-  assert run(p, "+123") == Ok(123)
-  assert run(p, "-123") == Ok(-123)
-  assert run(p, "abc")
+  assert text.run(p, "123") == Ok(123)
+  assert text.run(p, "+123") == Ok(123)
+  assert text.run(p, "-123") == Ok(-123)
+  assert text.run(p, "abc")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("a"),
@@ -190,12 +186,12 @@ pub fn signed_test() {
 pub fn char_literal_test() {
   let p = text.char_literal()
 
-  assert run(p, "'a'") == Ok("a")
-  assert run(p, "'\\n'") == Ok("\n")
-  assert run(p, "'\\''") == Ok("'")
-  assert run(p, "'\\z'")
+  assert text.run(p, "'a'") == Ok("a")
+  assert text.run(p, "'\\n'") == Ok("\n")
+  assert text.run(p, "'\\''") == Ok("'")
+  assert text.run(p, "'\\z'")
     == Error(atto.Msg(text.Pos(1, 3), atto.Name("invalid escape"), set.new()))
-  assert run(p, "abc")
+  assert text.run(p, "abc")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("a"),
@@ -206,13 +202,13 @@ pub fn char_literal_test() {
 pub fn string_literal_test() {
   let p = text.string_literal()
 
-  assert run(p, "\"hello\"") == Ok("hello")
-  assert run(p, "\"hello\\nworld\"") == Ok("hello\nworld")
-  assert run(p, "\"hello\\\"world\"") == Ok("hello\"world")
-  assert run(p, "\"hello\\\\world\"") == Ok("hello\\world")
-  assert run(p, "\"hello\\zworld\"")
+  assert text.run(p, "\"hello\"") == Ok("hello")
+  assert text.run(p, "\"hello\\nworld\"") == Ok("hello\nworld")
+  assert text.run(p, "\"hello\\\"world\"") == Ok("hello\"world")
+  assert text.run(p, "\"hello\\\\world\"") == Ok("hello\\world")
+  assert text.run(p, "\"hello\\zworld\"")
     == Error(atto.Msg(text.Pos(1, 8), atto.Name("invalid escape"), set.new()))
-  assert run(p, "abc")
+  assert text.run(p, "abc")
     == Error(atto.Msg(
       text.Pos(1, 1),
       atto.Token("a"),

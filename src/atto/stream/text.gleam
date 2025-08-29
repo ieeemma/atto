@@ -7,8 +7,14 @@ import gleam/order
 import gleam/result
 import gleam/string
 
+/// Specialized `Parser` for simple text parsers without state.
 pub type Parser(a) =
   atto.Parser(a, String, String, List(String), Pos, Nil, Nil)
+
+/// Specialized `run` for simple text parsers.
+pub fn run(p: Parser(a), src: String) {
+  atto.run(p, stream(), new(src, Nil))
+}
 
 /// Create a state from a string input.
 pub fn new(src: String, ctx: c) -> atto.State(List(String), Pos, c) {
