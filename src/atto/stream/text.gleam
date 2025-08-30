@@ -238,6 +238,11 @@ pub fn float() -> atto.Parser(Float, String, ts, s, p, c, e) {
   { n <> "." <> m } |> float.parse |> result.unwrap(0.0) |> atto.pure
 }
 
+/// Parse an integer or floating point number.
+pub fn integer_or_float() -> atto.Parser(Float, String, ts, s, p, c, e) {
+  atto.choice(integer() |> atto.map(int.to_float), float())
+}
+
 /// Wrap a parser such that it can be signed.
 /// When it is prefixed by `-`, the result is negated.
 pub fn signed(p, negate) -> atto.Parser(a, String, ts, s, p, c, e) {
