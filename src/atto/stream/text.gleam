@@ -130,7 +130,13 @@ fn cmp(a: Pos, b: Pos) {
 /// Parse a character from a set of characters.
 pub fn char_of(cs) -> atto.Parser(String, String, ts, s, p, c, e) {
   use <- atto.label("one of " <> string.inspect(cs))
-  atto.satisfy(fn(c) { cs |> string.contains(c) })
+  atto.satisfy(fn(c) { string.contains(cs, c) })
+}
+
+/// Parse a character not from a set of characters.
+pub fn not_char_of(cs) -> atto.Parser(String, String, ts, s, p, c, e) {
+  use <- atto.label("not one of " <> string.inspect(cs))
+  atto.satisfy(fn(c) { !string.contains(cs, c) })
 }
 
 /// Parse zero or more whitespace characters.
