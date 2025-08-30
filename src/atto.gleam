@@ -70,15 +70,7 @@ fn merge(
     order.Lt -> b
     // TODO: This is a hack around not_followed_by taking `None` as the preferred
     // error msg. Will this have any negative consequences?
-    order.Eq ->
-      Msg(
-        a.pos,
-        case a.found {
-          None -> b.found
-          a -> a
-        },
-        set.union(a.expected, b.expected),
-      )
+    order.Eq -> Msg(..a, expected: set.union(a.expected, b.expected))
   }
 }
 
@@ -92,18 +84,6 @@ pub type Consumed {
 /// a parsing error message, and a flag indicating if input was consumed.
 pub type Reply(a, t, ts, s, p, c, e) =
   #(Result(#(a, State(s, p, c)), Nil), Msg(t, ts, s, p, c, e), Consumed)
-
-fn merge_into(
-  reply: Reply(a, t, ts, s, p, c, e),
-  stream: Stream(t, ts, s, p, c),
-  m: Msg(t, ts, s, p, c, e),
-  c: option.Option(Consumed),
-) -> Reply(a, t, ts, s, p, c, e) {
-  #(reply.0, merge(reply.1, m, stream), case reply.0 {
-    Ok(_) -> reply.2
-    Error(_) -> option.unwrap(c, reply.2)
-  })
-}
 
 /// A parser, parameterized by:
 /// - result `a`
@@ -213,8 +193,13 @@ pub fn bind(
   fn(stream, state) {
     case p.run(stream, state) {
       #(Error(_), err, c) -> #(Error(Nil), err, c)
-      #(Ok(#(a, state)), err, c) ->
-        f(a).run(stream, state) |> merge_into(stream, err, option.Some(c))
+      #(Ok(#(a, state)), err, c) -> {
+        let r = f(a).run(stream, state)
+        #(r.0, merge(r.1, err, stream), case r.0 {
+          Ok(_) -> r.2
+          Error(_) -> c
+        })
+      }
     }
   }
   |> Parser
@@ -246,8 +231,10 @@ pub fn choice(
 ) -> Parser(a, t, ts, s, p, c, e) {
   fn(stream, state) {
     case a.run(stream, state) {
-      #(Error(_), err, Empty) ->
-        b.run(stream, state) |> merge_into(stream, err, option.None)
+      #(Error(_), err, Empty) -> {
+        let r = b.run(stream, state)
+        #(r.0, merge(err, r.1, stream), r.2)
+      }
       a -> a
     }
   }
