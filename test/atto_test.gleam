@@ -1,5 +1,6 @@
 import atto
 import atto/stream/text
+import gleam/result
 import gleam/set
 import gleeunit
 
@@ -35,23 +36,23 @@ pub fn bind_test() {
     == Error(atto.Msg(text.Pos(1, 1), atto.Name("foo"), set.new()))
 
   assert {
-      use a <- atto.bind(atto.char("a"))
-      use b <- atto.bind(atto.char("b"))
-      atto.pure(a <> b)
+      use a <- atto.bind(text.char("a"))
+      use b <- atto.bind(text.char("b"))
+      atto.pure(text.char_to_string(a) <> text.char_to_string(b))
     }
     |> text.run("ab")
     == Ok("ab")
 }
 
 pub fn choice_test() {
-  let p = atto.choice(atto.char("a"), atto.char("b"))
-  assert p |> text.run("a") == Ok("a")
-  assert p |> text.run("b") == Ok("b")
+  let p = atto.choice(text.char("a"), text.char("b"))
+  assert p |> text.run("a") |> result.map(text.char_to_string) == Ok("a")
+  assert p |> text.run("b") |> result.map(text.char_to_string) == Ok("b")
   assert p |> text.run("c")
     == Error(atto.Msg(
       text.Pos(1, 1),
-      atto.Token("c"),
-      set.from_list([atto.Token("a"), atto.Token("b")]),
+      atto.Token(99),
+      set.from_list([atto.Token(97), atto.Token(98)]),
     ))
 
   let p =
