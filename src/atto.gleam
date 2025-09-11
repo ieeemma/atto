@@ -1,5 +1,4 @@
 import gleam/list
-import gleam/option
 import gleam/order
 import gleam/result
 import gleam/set
@@ -21,6 +20,8 @@ pub type Stream(t, ts, s, p, c) {
     /// Get a chunk of tokens from the stream, advancing the position.
     /// Returns `Error(Nil)` if the stream has fewer tokens than required.
     gets: fn(State(s, p, c), Int) -> Result(#(ts, State(s, p, c)), Nil),
+    /// Get a chunk of tokens from the stream while a predicate is true.
+    gets_while: fn(State(s, p, c), fn(t) -> Bool) -> #(ts, State(s, p, c)),
     /// Get the length of a chunk.
     len: fn(ts) -> Int,
     /// Compare two positions.
@@ -36,12 +37,13 @@ pub type Stream(t, ts, s, p, c) {
 pub fn make_stream(
   get get,
   gets gets,
+  gets_while gets_while,
   len len,
   cmp_pos cmp_pos,
   eq_tok eq_tok,
   eq_toks eq_toks,
 ) -> Stream(t, ts, s, p, c) {
-  Stream(get, gets, len, cmp_pos, eq_tok, eq_toks)
+  Stream(get, gets, gets_while, len, cmp_pos, eq_tok, eq_toks)
 }
 
 /// A parsing error message, containing the position of the error,
@@ -395,6 +397,33 @@ pub fn string(ts1: ts) -> Parser(ts, t, ts, s, p, c, e) {
         Empty,
       )
     }
+  }
+  |> Parser
+}
+
+/// Parse a chunk of tokens while a predicate holds.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// atto.take_while(fn(t) { t < "5" })
+/// // "0123456789" -> Ok("01234")
+/// ```
+pub fn take_while(f: fn(t) -> Bool) -> Parser(ts, t, ts, s, p, c, e) {
+  fn(stream: Stream(t, ts, s, p, c), state) {
+    let #(ts, state) = stream.gets_while(state, f)
+    #(
+      Ok(#(ts, state)),
+      Msg(
+        state.pos,
+        Tokens(ts),
+        set.new() |> set.insert(Name("token matching predicate")),
+      ),
+      case stream.len(ts) {
+        0 -> Empty
+        _ -> Consumed
+      },
+    )
   }
   |> Parser
 }

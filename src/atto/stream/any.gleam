@@ -20,6 +20,7 @@ pub fn stream(
   atto.make_stream(
     get: get(advance),
     gets: gets(advance),
+    gets_while: gets_while(advance),
     cmp_pos: compare,
     len: list.length,
     eq_tok: eq,
@@ -43,6 +44,10 @@ fn gets(advance) {
     let ts2 = list.drop(state.src, n)
     Ok(#(ts1, atto.State(ts2, advance(ts1, state.pos), state.ctx)))
   }
+}
+
+fn gets_while(advance) {
+  fn(state: atto.State(List(t), p, c), f: fn(t) -> Bool) { todo }
 }
 
 fn eq_toks(eq) {
