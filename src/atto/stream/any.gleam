@@ -47,7 +47,21 @@ fn gets(advance) {
 }
 
 fn gets_while(advance) {
-  fn(state: atto.State(List(t), p, c), f: fn(t) -> Bool) { todo }
+  fn(state: atto.State(List(t), p, c), f: fn(t) -> Bool) {
+    let #(ts, src) = gets_while_rec(state.src, f, [])
+    #(ts, atto.State(src, advance(ts, state.pos), state.ctx))
+  }
+}
+
+fn gets_while_rec(src, f, acc) {
+  case src {
+    [] -> #(acc, [])
+    [t, ..ts] ->
+      case f(t) {
+        False -> #(acc, ts)
+        True -> gets_while_rec(ts, f, [t, ..acc])
+      }
+  }
 }
 
 fn eq_toks(eq) {

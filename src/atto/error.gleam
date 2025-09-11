@@ -39,7 +39,7 @@ pub fn make_renderer(
 
 /// A window into the source code, with a before, current, and after section.
 pub type Window(s) {
-  Window(before: s, current: s, after: s)
+  Window(before: StringTree, current: StringTree, after: StringTree)
 }
 
 /// How to render a parse error.
@@ -132,13 +132,11 @@ pub fn render_tree(
   // The view of the source code
   let src = {
     let win = render.window(err.pos, err.found, src)
-    let before = win.before |> render.src
-    let current = win.current |> render.src
-    let after = win.after |> render.src
-
     let show_arrow =
       !opts.color
-      || { current |> string_tree.to_string |> string.trim |> string.is_empty }
+      || {
+        win.current |> string_tree.to_string |> string.trim |> string.is_empty
+      }
 
     let end = case show_arrow {
       True -> "├  "
@@ -146,16 +144,20 @@ pub fn render_tree(
     }
 
     let line =
-      string_tree.concat([before, current |> color_if(red, opts), after])
+      string_tree.concat([
+        win.before,
+        win.current |> color_if(red, opts),
+        win.after,
+      ])
       |> string_tree.prepend_tree(unicode(end, ">  ", opts))
 
-    let col = before |> string_tree.byte_size
+    let col = win.before |> string_tree.byte_size
 
     let gap =
       string_tree.from_strings(list.repeat(" ", col + 2))
       |> string_tree.prepend_tree(unicode("\n│", "\n ", opts))
 
-    let arrow = case opts.unicode, string_tree.byte_size(current) {
+    let arrow = case opts.unicode, string_tree.byte_size(win.current) {
       True, 0 -> string_tree.from_string("╷")
       True, 1 -> string_tree.from_string("╷")
       True, n -> string_tree.from_strings(["╭", string.repeat("─", n - 1)])

@@ -417,12 +417,27 @@ pub fn take_while(f: fn(t) -> Bool) -> Parser(ts, t, ts, s, p, c, e) {
       Msg(
         state.pos,
         Tokens(ts),
-        set.new() |> set.insert(Name("token matching predicate")),
+        set.new() |> set.insert(Name("tokens matching predicate")),
       ),
       case stream.len(ts) {
         0 -> Empty
         _ -> Consumed
       },
+    )
+  }
+  |> Parser
+}
+
+pub fn take_while_1(f: fn(t) -> Bool) -> Parser(ts, t, ts, s, p, c, e) {
+  fn(stream: Stream(t, ts, s, p, c), state) {
+    let #(x, msg, c) = take_while(f).run(stream, state)
+    #(
+      case c {
+        Empty -> Error(Nil)
+        Consumed -> x
+      },
+      msg,
+      c,
     )
   }
   |> Parser
