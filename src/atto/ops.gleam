@@ -4,7 +4,7 @@ import gleam/list
 import gleam/result
 import gleam/set
 
-import atto.{type Parser, do, drop, pure}
+import atto.{type Parser, type ParserInput, type Pos, Parser, do, drop, pure}
 
 /// Try to apply a parser, returning `Nil` if it fails without consuming input.
 /// 
@@ -165,4 +165,63 @@ pub fn between(
   use x <- do(p)
   use <- drop(close)
   pure(x)
+}
+
+/// Fails and backtracks if `p` succeeds, otherwise returns the _token_.
+/// 
+/// **Please note:** If `p` maps to some type `a`, then `not(p)` must also
+/// map to `a` (see examples).
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// ops.not(token("b"))
+/// |> run(text.new("a"), Nil)
+/// // -> Ok("b")
+/// 
+/// ops.not(token("a"))
+/// |> run(text.new("a"), Nil)
+/// // -> Error(ParseError(Pos(0, 1), Token("a"), set.new()))
+/// 
+/// // If p maps to Int, not(p) must also map to Int:
+/// let a = token("a") |> atto.map(fn(_) { 0 })
+/// let not_a = ops.not(a) |> atto.map(fn(_) { 1 })
+/// ops.choice([a, not_a])
+/// |> run(text.new("b"), Nil)
+/// // -> Ok(1)
+/// ```
+pub fn not(that p: Parser(a, t, s, c, e)) -> Parser(t, t, s, c, e) {
+  Parser(run: fn(in: ParserInput(t, s), pos: Pos, ctx: c) -> Result(
+    #(t, ParserInput(t, s), Pos, c),
+    atto.ParseError(e, t),
+  ) {
+    case p.run(in, pos, ctx) {
+      Ok(#(_res, _in2, pos2, _ctx2)) ->
+        case atto.get_token(in, pos) {
+          Ok(#(token, _, _)) ->
+            Error(atto.ParseError(
+              span: atto.Span(pos, pos2),
+              got: atto.Token(token),
+              expected: set.new(),
+            ))
+          Error(_) ->
+            Error(atto.ParseError(
+              span: atto.Span(pos, pos2),
+              got: atto.Msg("EOF"),
+              expected: set.new(),
+            ))
+        }
+
+      Error(_) ->
+        case atto.get_token(in, pos) {
+          Ok(#(token, in2, pos2)) -> Ok(#(token, in2, pos2, ctx))
+          Error(_) ->
+            Error(atto.ParseError(
+              span: atto.Span(pos, pos),
+              got: atto.Msg("EOF"),
+              expected: set.new(),
+            ))
+        }
+    }
+  })
 }

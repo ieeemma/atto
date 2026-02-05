@@ -127,3 +127,24 @@ pub fn between_test() {
     )),
   )
 }
+
+pub fn not_test() {
+  let a = atto.token("a")
+  let not_a = ops.not(a)
+
+  assert atto.run(not_a, text.new("b"), Nil) == Ok("b")
+  assert atto.run(not_a, text.new("a"), Nil)
+    == Error(atto.ParseError(
+      span: span_char(0, 1, 1),
+      got: atto.Token("a"),
+      expected: set.new(),
+    ))
+}
+
+pub fn not_and_backtrack_test() {
+  let a = atto.token("a") |> atto.map(fn(_) { 1 })
+  let not_a = ops.not(a) |> atto.map(fn(_) { 0 })
+  let parser = ops.some(ops.choice([a, not_a]))
+
+  assert atto.run(parser, text.new("abba"), Nil) == Ok([1, 0, 0, 1])
+}
